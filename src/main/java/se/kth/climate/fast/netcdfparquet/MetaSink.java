@@ -23,7 +23,11 @@ import se.kth.climate.fast.common.Metadata;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public interface MetaSink extends AutoCloseable {
+
     public void sink(Metadata meta) throws IOException;
 }

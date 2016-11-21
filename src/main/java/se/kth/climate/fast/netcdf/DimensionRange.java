@@ -15,30 +15,43 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
-
-import java.io.IOException;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.reflect.ReflectDatumWriter;
-import se.kth.climate.fast.common.Metadata;
+package se.kth.climate.fast.netcdf;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public class StdSink {
+public class DimensionRange {
 
-    public static class Factory implements MetaSinkFactory {
+    public final String name;
+    public final long start;
+    public final long end;
+    public final boolean inf;
 
-        @Override
-        public MetaSink create() throws IOException {
-            ReflectDatumWriter< Metadata> reflectDatumWriter = new ReflectDatumWriter<>(Metadata.AVRO);
-            DataFileWriter< Metadata> writer = new DataFileWriter<>(reflectDatumWriter).create(Metadata.AVRO, System.out);
-            return new AvroSink(writer);
+    public DimensionRange(String name, long start, long end, boolean inf) {
+        this.name = name;
+        this.start = start;
+        this.end = end;
+        this.inf = inf;
+    }
+    
+    public long getSize() {
+        return end - start;
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("DimensionRange(name=");
+        sb.append(name);
+        sb.append(',');
+        sb.append(start);
+        sb.append('-');
+        sb.append(end);
+        if (inf) {
+            sb.append("(currently)");
         }
-
+        sb.append(")");
+        return sb.toString();
     }
 }

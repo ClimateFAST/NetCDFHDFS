@@ -15,19 +15,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
+package se.kth.climate.fast.netcdf;
 
-import java.io.IOException;
-import org.apache.avro.generic.GenericContainer;
+import org.junit.Test;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public interface RecordSink extends AutoCloseable {
-
-    public void sink(GenericContainer record) throws IOException;
+public class WriterTest {
+    
+    public WriterTest() {
+    }
+    
+    @Test
+    public void testWriter() {
+        NetCDFWriter writer = new NetCDFWriter();
+//        try {
+//            writer.write();
+//        } catch (IOException ex) {
+//            ex.printStackTrace(System.err);
+//            Assert.fail(ex.getMessage());
+//        }
+    }
 }

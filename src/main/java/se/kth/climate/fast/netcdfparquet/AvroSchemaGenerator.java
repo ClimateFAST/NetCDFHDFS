@@ -37,7 +37,9 @@ import ucar.nc2.Variable;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with NetCDF Alignment.
  */
+@Deprecated
 public class AvroSchemaGenerator {
 
     public static Pair<Schema, MetaInfo> fromNetCDF(NetcdfFile ncfile) {
@@ -59,7 +61,7 @@ public class AvroSchemaGenerator {
         }
         for (Variable v : ncfile.getVariables()) {
             List<Dimension> dims = v.getDimensions();
-            if (dims.isEmpty()) {
+            if (isConstant(dims)) {
                 LOG.info("Not including variable {} in record, since it's a constant.", v.getFullNameEscaped());
                 bi.constants.add(v.getFullNameEscaped());
                 continue;
@@ -172,12 +174,23 @@ public class AvroSchemaGenerator {
             if (v.getFullNameEscaped().contains("bnds")) {
                 for (Dimension d : v.getDimensions()) {
                     if (boundDim.contains(d.getFullNameEscaped())) {
-                        bi.variable2Dimension.putIfAbsent(v.getFullNameEscaped(), d.getFullNameEscaped());
+                        bi.variable2Dimension.put(v.getFullNameEscaped(), d.getFullNameEscaped());
                     }
                 }
             }
         }
         return bi;
+    }
+
+    private static boolean isConstant(List<Dimension> dims) {
+        if (dims.isEmpty()) {
+            return true;
+        }
+        if (dims.size() == 1) {
+            Dimension d = dims.get(0);
+            return d.getLength() == 1;
+        }
+        return false;
     }
 
     public static class MetaInfo {

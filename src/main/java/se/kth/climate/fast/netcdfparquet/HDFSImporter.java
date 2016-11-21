@@ -40,7 +40,10 @@ import ucar.nc2.NetcdfFile;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class HDFSImporter implements Runnable {
 
     private final NetcdfFile[] ncfiles;
@@ -78,7 +81,7 @@ public class HDFSImporter implements Runnable {
 
                 Path outputFile = new Path(hdfs + hdfsPath);
                 Path metaFile = outputFile.suffix("meta");
-                sinkFactory = new ParquetSink.Factory(outputFile);
+                sinkFactory = new ParquetSink.Factory(outputFile, uc.noDict);
                 OutputStream os = fs.create(metaFile,
                         new Progressable() {
                             @Override

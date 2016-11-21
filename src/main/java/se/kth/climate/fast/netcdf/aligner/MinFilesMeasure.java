@@ -15,19 +15,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
+package se.kth.climate.fast.netcdf.aligner;
 
-import java.io.IOException;
-import org.apache.avro.generic.GenericContainer;
+import org.javatuples.Pair;
+import se.kth.climate.fast.netcdf.MetaInfo;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public interface RecordSink extends AutoCloseable {
+public class MinFilesMeasure implements AssignmentQualityMeasure {
 
-    public void sink(GenericContainer record) throws IOException;
+    @Override
+    public double score(VariableAlignment va, MetaInfo metaInfo) {
+        int files = 0;
+        for (Pair<VariableAssignment, VariableFit> pvv : va) {
+            //final VariableAssignment vass = pvv.getValue0();
+            final VariableFit vf = pvv.getValue1();
+            files += vf.numberOfFiles;
+        }
+        return (double)(- files); // lower numbers are better
+    }
+    
 }

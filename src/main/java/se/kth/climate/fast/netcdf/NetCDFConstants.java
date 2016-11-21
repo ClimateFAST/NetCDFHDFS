@@ -15,19 +15,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
-
-import java.io.IOException;
-import org.apache.avro.generic.GenericContainer;
+package se.kth.climate.fast.netcdf;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public interface RecordSink extends AutoCloseable {
+public abstract class NetCDFConstants {
 
-    public void sink(GenericContainer record) throws IOException;
+    public static final int MAGIC_SIZE = 4;
+    public static final int TAG_SIZE = 4;
+    public static final int N_SIZE = 4;
+    public static final int OFFSET_SIZE = 8;
+    public static final int DTYPE_SIZE = 4;
+    public static final int ALIGN_SIZE = 8;
+    public static final int PADDING_SIZE = 4;
 }

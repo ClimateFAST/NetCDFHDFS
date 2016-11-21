@@ -15,19 +15,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
+package se.kth.climate.fast.netcdf.aligner;
 
-import java.io.IOException;
-import org.apache.avro.generic.GenericContainer;
+import org.javatuples.Pair;
+import se.kth.climate.fast.netcdf.MetaInfo;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public interface RecordSink extends AutoCloseable {
+public class MaxInfVarRecordMeasure implements AssignmentQualityMeasure {
 
-    public void sink(GenericContainer record) throws IOException;
+    @Override
+    public double score(VariableAlignment va, MetaInfo metaInfo) {
+        double score = 0.0;
+        for (Pair<VariableAssignment, VariableFit> pvv : va) {
+            final VariableAssignment vass = pvv.getValue0();
+            final VariableFit vf = pvv.getValue1();
+            for (String v : vass.infVariables) {
+                score += (double) vf.recordsForVar.get(v);
+            } // reward large number of records of inf var
+            score -= vf.numberOfFiles; // penalise large number of files
+        }
+        return score;
+    }
+
 }

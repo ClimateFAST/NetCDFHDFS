@@ -15,19 +15,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
+package se.kth.climate.fast.netcdf.aligner;
 
-import java.io.IOException;
-import org.apache.avro.generic.GenericContainer;
+import se.kth.climate.fast.netcdf.MetaInfo;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public interface RecordSink extends AutoCloseable {
-
-    public void sink(GenericContainer record) throws IOException;
+public interface AssignmentQualityMeasure {
+    /**
+     * Generate a score for a certain variable assignment, that the solver uses to find the best assignment.
+     * 
+     * @param va
+     * @param metaInfo
+     * @return 
+     */
+    public double score(VariableAlignment va, MetaInfo metaInfo);
 }

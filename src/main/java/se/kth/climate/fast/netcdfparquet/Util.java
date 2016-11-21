@@ -26,7 +26,10 @@ import static se.kth.climate.fast.netcdfparquet.Main.LOG;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class Util {
 
     public static void checkFile(File f, boolean force) {

@@ -15,19 +15,37 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdfparquet;
+package se.kth.climate.fast.netcdf.aligner;
 
-import java.io.IOException;
-import org.apache.avro.generic.GenericContainer;
+import se.kth.climate.fast.netcdf.DataDescriptor;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
- * NetCDF Alignment.
  */
-@Deprecated
-public interface RecordSink extends AutoCloseable {
+public class FittingException extends RuntimeException {
 
-    public void sink(GenericContainer record) throws IOException;
+    private static final long serialVersionUID = -4057874211960123354L;
+
+    private final String fullMessage;
+
+    public FittingException(String msg, VariableAssignment va, DataDescriptor dd) {
+        super(msg);
+        StringBuilder sb = new StringBuilder();
+        sb.append("FittingException(\n");
+        sb.append("   assignment: ");
+        sb.append(va);
+        sb.append("\n   data descriptor: ");
+        sb.append(dd);
+        sb.append("\n   msg: \"");
+        sb.append(msg);
+        sb.append("\")");
+        fullMessage = sb.toString();
+    }
+
+    @Override
+    public String toString() {
+        return fullMessage;
+    }
+
 }

@@ -17,38 +17,39 @@
  */
 package se.kth.climate.fast.netcdfparquet;
 
+import com.google.gson.Gson;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.reflect.ReflectDatumWriter;
+import java.io.OutputStreamWriter;
 import se.kth.climate.fast.common.Metadata;
 
 /**
  *
  * @author lkroll
- * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with NetCDF Alignment.
  */
-@Deprecated
-public class AvroSink implements MetaSink {
+public class GsonSink implements MetaSink {
 
-    private final DataFileWriter< Metadata> writer;
+    private final OutputStreamWriter writer;
+    private final Gson gson = new Gson();
 
-    AvroSink(DataFileWriter<Metadata> writer) {
+    GsonSink(OutputStreamWriter writer) {
         this.writer = writer;
     }
-
+    
     @Override
     public void sink(Metadata meta) throws IOException {
-        writer.append(meta);
-        writer.fSync();
+        String json = gson.toJson(meta);
+        writer.write(json);
     }
 
     @Override
     public void close() throws Exception {
         writer.close();
     }
-
+    
+    
     public static class FileFactory implements MetaSinkFactory {
 
         private final File target;
@@ -59,9 +60,8 @@ public class AvroSink implements MetaSink {
 
         @Override
         public MetaSink create() throws IOException {
-            ReflectDatumWriter< Metadata> reflectDatumWriter = new ReflectDatumWriter<>(Metadata.AVRO);
-            DataFileWriter< Metadata> writer = new DataFileWriter<>(reflectDatumWriter).create(Metadata.AVRO, target);
-            return new AvroSink(writer);
+            FileWriter writer = new FileWriter(target);
+            return new GsonSink(writer);
         }
 
     }
@@ -76,9 +76,8 @@ public class AvroSink implements MetaSink {
 
         @Override
         public MetaSink create() throws IOException {
-            ReflectDatumWriter< Metadata> reflectDatumWriter = new ReflectDatumWriter<>(Metadata.AVRO);
-            DataFileWriter< Metadata> writer = new DataFileWriter<>(reflectDatumWriter).create(Metadata.AVRO, target);
-            return new AvroSink(writer);
+            OutputStreamWriter writer = new OutputStreamWriter(target);
+            return new GsonSink(writer);
         }
 
     }

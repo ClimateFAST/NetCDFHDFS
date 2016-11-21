@@ -28,7 +28,10 @@ import ucar.nc2.time.CalendarPeriod;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class DateOffsetter implements Offsetter {
 
     private final CalendarDateUnit unit;
@@ -83,7 +86,7 @@ public class DateOffsetter implements Offsetter {
             cur = CalendarDateUnit.withCalendar(cal, unitAttr.getStringValue());
             LOG.debug("Using unit {} for variable {}", unit, v.getFullNameEscaped());
         }
-        
+
         CalendarDate cdBase = unit.makeCalendarDate(0);
         CalendarDate dbCur = cur.makeCalendarDate(0);
         offset = unit.getTimeUnit().getOffset(cdBase, dbCur);

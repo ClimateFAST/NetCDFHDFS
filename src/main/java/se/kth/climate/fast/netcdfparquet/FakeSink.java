@@ -24,7 +24,10 @@ import org.apache.avro.generic.GenericContainer;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class FakeSink implements RecordSink {
 
     @Override

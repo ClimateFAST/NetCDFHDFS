@@ -20,7 +20,11 @@ package se.kth.climate.fast.netcdfparquet;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public interface Offsetter {
+
     public Object offset(Object original);
 }

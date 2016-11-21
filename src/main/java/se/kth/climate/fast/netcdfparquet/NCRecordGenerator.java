@@ -36,6 +36,7 @@ import se.kth.climate.fast.netcdfparquet.AvroSchemaGenerator.MetaInfo;
 import static se.kth.climate.fast.netcdfparquet.Main.LOG;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
+import ucar.ma2.InvalidRangeException;
 import ucar.nc2.Attribute;
 import ucar.nc2.Dimension;
 import ucar.nc2.NetcdfFile;
@@ -44,7 +45,10 @@ import ucar.nc2.Variable;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class NCRecordGenerator {
 
     private final Schema avroSchema;
@@ -59,7 +63,7 @@ public class NCRecordGenerator {
     public NCRecordGenerator(Schema avroSchema, MetaInfo bi, RecordSink sink, UserConfig uc) {
         this.avroSchema = avroSchema;
         this.bInfo = bi;
-        this.sink = sink;
+        this.sink = DecoupledSink.decouple(sink);
         this.uc = uc;
         this.xfData = new CrossFileData(uc.xfAcc);
     }
@@ -84,21 +88,37 @@ public class NCRecordGenerator {
                 Constant c = meta.addConstant(vb);
                 Array a = v.read();
                 switch (v.getDataType()) {
-                    case DOUBLE:
-                        c.set(a.getDouble(Index.scalarIndexImmutable));
-                        break;
-                    case FLOAT:
-                        c.set(a.getFloat(Index.scalarIndexImmutable));
-                        break;
-                    case LONG:
-                        c.set(a.getLong(Index.scalarIndexImmutable));
-                        break;
-                    case INT:
-                        c.set(a.getInt(Index.scalarIndexImmutable));
-                        break;
-                    case BOOLEAN:
-                        c.set(a.getBoolean(Index.scalarIndexImmutable));
-                        break;
+                    case DOUBLE: {
+                        double d = a.getDouble(Index.scalarIndexImmutable);
+                        c.setReadable(Double.toString(d));
+                        c.set(d);
+                    }
+                    break;
+
+                    case FLOAT: {
+                        float f = a.getFloat(Index.scalarIndexImmutable);
+                        c.setReadable(Float.toString(f));
+                        c.set(f);
+                    }
+                    break;
+                    case LONG: {
+                        long l = a.getLong(Index.scalarIndexImmutable);
+                        c.setReadable(Long.toString(l));
+                        c.set(l);
+                    }
+                    break;
+                    case INT: {
+                        int i = a.getInt(Index.scalarIndexImmutable);
+                        c.setReadable(Integer.toString(i));
+                        c.set(i);
+                    }
+                    break;
+                    case BOOLEAN: {
+                        boolean b = a.getBoolean(Index.scalarIndexImmutable);
+                        c.setReadable(Boolean.toString(b));
+                        c.set(b);
+                    }
+                    break;
                     default:
                         LOG.warn("No available primitive {} for constant {}!", v.getDataType(), v);
 
@@ -159,7 +179,7 @@ public class NCRecordGenerator {
         return meta.build();
     }
 
-    public int generate(NetcdfFile ncfile) throws IOException {
+    public int generate(NetcdfFile ncfile) throws IOException, InvalidRangeException {
         if ((largestShape == null) || (varsInAvro == null)) {
             throw new RuntimeException("Run prepare() before generate()!");
         }
@@ -168,7 +188,7 @@ public class NCRecordGenerator {
         return generated;
     }
 
-    private int generate(int dim) throws IOException {
+    private int generate(int dim) throws IOException, InvalidRangeException {
         int count = 0;
         if (dim < (largestShape.length - 1)) { // recurse
             for (int i = 0; i < largestShape[dim]; i++) {
@@ -214,7 +234,7 @@ public class NCRecordGenerator {
         }
     }
 
-    private void updateDims(int dim, int i) throws IOException {
+    private void updateDims(int dim, int i) throws IOException, InvalidRangeException {
         for (DataWrapper dw : varsInAvro) {
             dw.updateIndex(dim, i);
         }
@@ -287,7 +307,7 @@ public class NCRecordGenerator {
 
         public void mapDimensions(int[] dimensionMap);
 
-        public void updateIndex(int dim, int val) throws IOException;
+        public void updateIndex(int dim, int val) throws IOException, InvalidRangeException;
 
         public Object getCurrentValue();
 
@@ -308,7 +328,7 @@ public class NCRecordGenerator {
 
         public final Variable v;
         public final String boundsDimension;
-        private Array data = null;
+        private final DataReader reader;
         public final Index index;
         private int[] dimensionTranslation;
 
@@ -316,13 +336,14 @@ public class NCRecordGenerator {
             this.v = v;
             this.boundsDimension = boundsDimension;
             index = Index.factory(v.getShape());
+            reader = DataReader.Factory.forVar(v);
         }
 
         private VariableData() {
             v = null;
             boundsDimension = null;
-            data = null;
             index = Index.scalarIndexImmutable;
+            reader = null;
         }
 
         @Override
@@ -331,19 +352,17 @@ public class NCRecordGenerator {
         }
 
         @Override
-        public void updateIndex(int dim, int val) throws IOException {
+        public void updateIndex(int dim, int val) throws IOException, InvalidRangeException {
             int dimT = dimensionTranslation[dim];
             if (dimT >= 0) {
-                if (data == null) {
-                    data = v.read(); // read everything for now...maybe later read less at once
-                }
                 index.setDim(dimT, val);
+                reader.prepare(dimT, index);
             } // else ignore
         }
 
         @Override
         public Object getCurrentValue() {
-            return data.getObject(index);
+            return reader.read();
         }
 
         @Override
@@ -404,7 +423,7 @@ public class NCRecordGenerator {
         }
 
         @Override
-        public void updateIndex(int dim, int val) throws IOException {
+        public void updateIndex(int dim, int val) throws IOException, InvalidRangeException {
             if (dim == this.dimensionTranslation) {
                 index = val;
             }
@@ -454,8 +473,8 @@ public class NCRecordGenerator {
 
         public final Variable v;
         public final Offsetter ofs;
+        private final DataReader reader;
         //public final String boundsDimension;
-        private Array data = null;
         public final Index index;
         private int[] dimensionTranslation;
 
@@ -463,6 +482,7 @@ public class NCRecordGenerator {
             this.v = v;
             this.ofs = ofs;
             index = Index.factory(v.getShape());
+            reader = DataReader.Factory.forVar(v);
         }
 
         @Override
@@ -471,19 +491,17 @@ public class NCRecordGenerator {
         }
 
         @Override
-        public void updateIndex(int dim, int val) throws IOException {
+        public void updateIndex(int dim, int val) throws IOException, InvalidRangeException {
             int dimT = dimensionTranslation[dim];
             if (dimT >= 0) {
-                if (data == null) {
-                    data = v.read(); // read everything for now...maybe later read less at once
-                }
                 index.setDim(dimT, val);
+                reader.prepare(dimT, index);
             } // else ignore
         }
 
         @Override
         public Object getCurrentValue() {
-            return ofs.offset(data.getObject(index));
+            return ofs.offset(reader.read());
         }
 
         @Override
@@ -519,7 +537,7 @@ public class NCRecordGenerator {
         }
 
         private Object getRawValue() {
-            return data.getObject(index);
+            return reader.read();
         }
 
     }
@@ -536,7 +554,9 @@ public class NCRecordGenerator {
 
         DimensionData registerDimension(Dimension d) {
             String name = d.getFullNameEscaped();
-            xfDimensions.putIfAbsent(name, 0l);
+            if (!xfDimensions.containsKey(name)) {
+                xfDimensions.put(name, 0l);
+            }
             long v = xfDimensions.get(name);
             return new DimensionData(d, v);
         }

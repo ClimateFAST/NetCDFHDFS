@@ -24,7 +24,9 @@ import ucar.ma2.DataType;
  *
  * @author lkroll
  * @param <T>
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with NetCDF Alignment.
  */
+@Deprecated
 public abstract class Accumulator<T> implements Offsetter {
 
     public abstract void update(T val);

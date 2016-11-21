@@ -22,25 +22,51 @@ import java.util.ArrayList;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class UserConfig {
+
     public final String[] xfAcc;
-    
-    public UserConfig(String[] xfAcc) {
+    public final boolean noDict;
+    public final String metaFormat;
+
+    public UserConfig(String[] xfAcc, boolean noDict, String metaFormat) {
         this.xfAcc = xfAcc;
+        this.noDict = noDict;
+        this.metaFormat = metaFormat;
     }
-    
+
     public static class Builder {
+
         private final ArrayList<String> xfAcc = new ArrayList<>();
+        private boolean noDict;
+        private String metaFormat;
+
+        public void setMetaFormat(String s) {
+            this.metaFormat = s;
+        }
         
         public void addXfVar(String xfVar) {
             this.xfAcc.add(xfVar);
         }
-        
+
+        public void useDict() {
+            this.noDict = false;
+        }
+
+        public void noDict() {
+            this.noDict = true;
+        }
+
+        public void setNoDict(boolean v) {
+            this.noDict = v;
+        }
+
         public UserConfig build() {
-            return new UserConfig(xfAcc.toArray(new String[0]));
+            return new UserConfig(xfAcc.toArray(new String[0]), noDict, metaFormat);
         }
     }
-    
-    
+
 }

@@ -42,7 +42,10 @@ import ucar.nc2.NetcdfFile;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class Main {
 
     static Logger LOG = LoggerFactory.getLogger("NetCDF2Parquet");
@@ -143,7 +146,9 @@ public class Main {
         opts.addOption("r", true, "Write remotely into HDFS at <arg> (can not be used together with -l)");
         opts.addOption("o", true, "Output file <arg> (use together with -r)");
         opts.addOption("xfAcc", true, "Cross file accumulation variables. Separate multiple names with comma without space");
-
+        opts.addOption("nodict", false, "Turn off Parquet column dictionaries. Improves write performance at the cost of increased file size.");
+        opts.addOption("metaformat", true, "File format for exported meta data. Options are {json, avro}");
+        
         return opts;
     }
 
@@ -193,9 +198,13 @@ public class Main {
             File f = files[i];
             String fName = f.getName();
             String fNameNoSuffix = FilenameUtils.removeExtension(fName);
-            cleanedFileNames[i] = fNameNoSuffix;
+            String fNameNoDotsNoDash = fNameNoSuffix.replace(".", "_").replace("-", "_");
+            cleanedFileNames[i] = fNameNoDotsNoDash;
         }
-        String prefix = StringUtils.getCommonPrefix(cleanedFileNames).replace("-", "");
+        if (cleanedFileNames.length == 1) {
+            return cleanedFileNames[0];
+        }
+        String prefix = StringUtils.getCommonPrefix(cleanedFileNames);
         if (prefix.endsWith("_")) {
             prefix = prefix.substring(0, prefix.length() - 1);
         }
@@ -209,5 +218,11 @@ public class Main {
                 ucb.addXfVar(var);
             }
         }
+        if (cmd.hasOption("metaformat")) {
+            ucb.setMetaFormat(cmd.getOptionValue("metaformat"));
+        } else {
+            ucb.setMetaFormat("json");
+        }
+        ucb.setNoDict(cmd.hasOption("nodict"));
     }
 }

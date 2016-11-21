@@ -30,7 +30,10 @@ import ucar.nc2.NetcdfFile;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public class LocalImporter implements Runnable {
 
     private final NetcdfFile[] ncfiles;
@@ -50,8 +53,14 @@ public class LocalImporter implements Runnable {
         Util.checkFile(metaOutputFile, force);
         LOG.info("Running in local mode and outputting to {} ({})", outputFileName, metaOutputFile);
         sinkFactory = new ParquetSink.Factory(
-                new org.apache.hadoop.fs.Path(outputFile.getAbsolutePath()));
-        metaFactory = new AvroSink.FileFactory(metaOutputFile);
+                new org.apache.hadoop.fs.Path(outputFile.getAbsolutePath()), uc.noDict);
+        if (uc.metaFormat.equalsIgnoreCase("avro")) {
+            metaFactory = new AvroSink.FileFactory(metaOutputFile);
+        } else if (uc.metaFormat.equalsIgnoreCase("json")) {
+            metaFactory = new GsonSink.FileFactory(metaOutputFile);
+        } else {
+            throw new RuntimeException("Unknown meta data format: " + uc.metaFormat);
+        }
     }
 
     @Override

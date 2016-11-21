@@ -22,7 +22,11 @@ import java.io.IOException;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public interface MetaSinkFactory {
-    public MetaSink create() throws IOException ;
+
+    public MetaSink create() throws IOException;
 }

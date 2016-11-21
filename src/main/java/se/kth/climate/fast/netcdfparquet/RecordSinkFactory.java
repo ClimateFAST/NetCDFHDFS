@@ -23,7 +23,11 @@ import org.apache.avro.Schema;
 /**
  *
  * @author lkroll
+ * @deprecated As of 0.3-SNAPSHOT the whole NetCDFParquet API is replaced with
+ * NetCDF Alignment.
  */
+@Deprecated
 public interface RecordSinkFactory {
-    public RecordSink create(Schema avroSchema) throws IOException ;
+
+    public RecordSink create(Schema avroSchema) throws IOException;
 }
