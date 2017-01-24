@@ -40,4 +40,14 @@ public class MaxInfVarRecordMeasure implements AssignmentQualityMeasure {
         return score;
     }
 
+    @Override
+    public String title() {
+        return "MIVRM";
+    }
+
+    @Override
+    public String description() {
+        return "Try to maximise the number of records of some unlimited dimension per file. This can lead to assignments where unrelated variable groups are split into different files.";
+    }
+
 }

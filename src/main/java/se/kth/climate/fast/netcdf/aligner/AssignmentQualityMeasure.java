@@ -24,12 +24,28 @@ import se.kth.climate.fast.netcdf.MetaInfo;
  * @author lkroll
  */
 public interface AssignmentQualityMeasure {
+
     /**
-     * Generate a score for a certain variable assignment, that the solver uses to find the best assignment.
-     * 
+     * Generate a score for a certain variable assignment, that the solver uses
+     * to find the best assignment.
+     * <p>
      * @param va
      * @param metaInfo
-     * @return 
+     * @return
      */
     public double score(VariableAlignment va, MetaInfo metaInfo);
+
+    /**
+     * A short title used for selection via config or commandline arguments
+     * <p>
+     * @return the title
+     */
+    public String title();
+    
+    /**
+     * A longer description that the explains what the measure does.
+     * 
+     * @return the description
+     */
+    public String description();
 }

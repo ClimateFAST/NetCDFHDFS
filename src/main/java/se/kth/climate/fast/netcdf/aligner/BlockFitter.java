@@ -113,8 +113,8 @@ public class BlockFitter {
             // generate sub ranges
             List<DimensionRange> subRanges = new LinkedList<>();
             long offset = dr1.start;
-            while (offset < dr1.end) { // NOTE: If there's an off by one issue, it's probably here^^
-                long endset = Math.min(offset + perBlockSize, dr1.end);
+            while (offset < dr1.end) {
+                long endset = Math.min(offset + perBlockSize - 1, dr1.end); // -1 since we shift the beginning by 1 already
                 subRanges.add(new DimensionRange(dr1.name, offset, endset, dr1.inf));
                 offset = endset + 1;
             }
@@ -150,7 +150,7 @@ public class BlockFitter {
             vars.add(varName);
             Variable v = mInfo.getVariable(varName);
             for (Dimension dim : v.getDimensions()) {
-                DimensionRange dr = new DimensionRange(dim.getFullNameEscaped(), 0, dim.getLength(), dim.isUnlimited());
+                DimensionRange dr = new DimensionRange(dim.getFullNameEscaped(), 0, dim.getLength()-1, dim.isUnlimited());
                 dims.putIfAbsent(dr.name, dr);
             }
         };

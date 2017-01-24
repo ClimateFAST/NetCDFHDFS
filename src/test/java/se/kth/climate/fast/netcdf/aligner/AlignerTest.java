@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Test;
 import se.kth.climate.fast.netcdf.MetaInfo;
+import se.kth.climate.fast.netcdf.NetCDFWriter;
 import ucar.nc2.NetcdfFile;
 
 /**
@@ -57,6 +58,25 @@ public class AlignerTest {
             BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MinFilesMeasure());
             VariableAlignment va = aligner.align();
             System.out.println("Chosen Alignment:\n" + va);
+        } catch (IOException ex) {
+            ex.printStackTrace(System.err);
+            Assert.fail(ex.getMessage());
+        }
+    }
+    
+    @Test
+    public void testWriting() {
+        try {
+            NetcdfFile ncfile = NetcdfFile.open("/Users/lkroll/Documents/Uni/Climate/tasminmax_Amon_EC-EARTH_historical_r2i1p1_195001-201212.nc");
+            MetaInfo mInfo = MetaInfo.fromNetCDF(ncfile);
+            //BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MaxInfVarRecordMeasure());
+            BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MinFilesMeasure());
+            VariableAlignment va = aligner.align();
+            //System.out.println("Chosen Alignment:\n" + va);
+            NetCDFWriter writer = new NetCDFWriter();
+            System.out.println("**** Alignment complete. Writing... *****");
+            writer.write(va, null);
+            System.out.println("**** Writing complete. *****");            
         } catch (IOException ex) {
             ex.printStackTrace(System.err);
             Assert.fail(ex.getMessage());

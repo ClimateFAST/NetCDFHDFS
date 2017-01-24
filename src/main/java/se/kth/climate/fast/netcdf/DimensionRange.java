@@ -17,6 +17,9 @@
  */
 package se.kth.climate.fast.netcdf;
 
+import ucar.ma2.InvalidRangeException;
+import ucar.ma2.Range;
+
 /**
  *
  * @author lkroll
@@ -34,11 +37,11 @@ public class DimensionRange {
         this.end = end;
         this.inf = inf;
     }
-    
+
     public long getSize() {
-        return end - start;
+        return (end - start)+1;
     }
-    
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -53,5 +56,17 @@ public class DimensionRange {
         }
         sb.append(")");
         return sb.toString();
+    }
+
+    public Range toRange() {
+        return toRange(1);
+    }
+
+    public Range toRange(int step) {
+        try {
+            return new Range((int) start, (int) end, step);
+        } catch (InvalidRangeException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 }

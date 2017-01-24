@@ -15,36 +15,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdf.aligner;
+package se.kth.climate.fast.netcdf.metadata;
 
-import org.javatuples.Pair;
-import se.kth.climate.fast.netcdf.MetaInfo;
+import java.io.IOException;
 
 /**
  *
  * @author lkroll
+ * 
  */
-public class MinFilesMeasure implements AssignmentQualityMeasure {
+public interface MetaSinkFactory {
 
-    @Override
-    public double score(VariableAlignment va, MetaInfo metaInfo) {
-        int files = 0;
-        for (Pair<VariableAssignment, VariableFit> pvv : va) {
-            //final VariableAssignment vass = pvv.getValue0();
-            final VariableFit vf = pvv.getValue1();
-            files += vf.numberOfFiles;
-        }
-        return (double) (-files); // lower numbers are better
-    }
-
-    @Override
-    public String title() {
-        return "MINFM";
-    }
-
-    @Override
-    public String description() {
-        return "Minimise the number of emitted files.";
-    }
-
+    public MetaSink create() throws IOException;
 }
