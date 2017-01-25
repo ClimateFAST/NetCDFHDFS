@@ -51,6 +51,7 @@ public abstract class MetaConverter {
         for (Dimension d : ncfile.getDimensions()) {
             DimensionBuilder db = new DimensionBuilder();
             fillMetaDimension(d, db);
+            meta.addDimension(db);
         }
         // VARIABLES & CONSTANTS
         for (Variable v : ncfile.getVariables()) {
@@ -59,6 +60,8 @@ public abstract class MetaConverter {
             if (mi.isConstant(v.getFullName())) {
                 Constant c = meta.addConstant(vb);
                 fillMetaConstant(v, c);
+            } else {
+                meta.addVariable(vb);
             }
         }
         return meta.build();

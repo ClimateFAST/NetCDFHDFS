@@ -38,6 +38,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.climate.fast.netcdf.hdfs.HDFSImporter;
 import ucar.nc2.NetcdfFile;
 
 /**
@@ -107,14 +108,14 @@ public class Main {
                     LocalImporter importer = new LocalImporter(ncfiles, conf, datasetFolder);
                     importer.run();
                     LOG.info("Import complete.");
-                } else if (cmd.hasOption("r") && cmd.hasOption("o")) {
+                } else if (cmd.hasOption("r")) {
                     // HDFS MODE
-                    String hdfs = cmd.getOptionValue("r");
-                    String hdfsPath = cmd.getOptionValue("o");
-                    // TODO
-//                    HDFSImporter importer = new HDFSImporter(ncfiles, uc);
-//                    importer.prepare(hdfs, hdfsPath, cmd.hasOption("f"));
-//                    importer.run();
+                    String hdfsPath = cmd.getOptionValue("r");                    
+                    String hdfsUser = cmd.hasOption("u") ? cmd.getOptionValue("u") : System.getProperty("user.name");
+                    HDFSImporter importer = new HDFSImporter(ncfiles, conf, hdfsUser, hdfsPath);
+                    checkOrExit(importer.prepare(), "Connection to HDFS failed!");
+                    importer.run();
+                    LOG.info("Import complete.");
                 } else {
                     LOG.warn("Neither local mode nor HDFS mode specified. Exiting with nothing to do...");
                 }
@@ -150,7 +151,7 @@ public class Main {
         opts.addOption("f", false, "Force override existsing files");
         opts.addOption("m", false, "Metadata only");
         opts.addOption("r", true, "Write remotely into HDFS at <arg> (can not be used together with -l)");
-        opts.addOption("o", true, "Output parent directory <arg> (use together with -r)");
+        opts.addOption("u", true, "Write as HDFS user <arg> (use together with -r)");
         //opts.addOption("metaformat", true, "File format for exported meta data. Options are {json, avro}");
 
         return opts;

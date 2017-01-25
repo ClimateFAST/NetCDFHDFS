@@ -19,18 +19,20 @@ package se.kth.climate.fast.netcdf;
 
 import com.google.common.io.Files;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.commons.codec.binary.Hex;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.climate.fast.common.Metadata;
 import se.kth.climate.fast.netcdf.aligner.VariableAlignment;
 import se.kth.climate.fast.netcdf.aligner.VariableAssignment;
 import se.kth.climate.fast.netcdf.aligner.VariableFit;
+import se.kth.climate.fast.netcdf.metadata.GsonSink;
+import se.kth.climate.fast.netcdf.metadata.MetaSink;
+import se.kth.climate.fast.netcdf.metadata.MetaSinkFactory;
 import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
@@ -48,10 +50,16 @@ public class NetCDFWriter {
     static final Logger LOG = LoggerFactory.getLogger(NetCDFWriter.class);
 
     public static final String SUFFIX = ".nc";
+    public static final String META_NAME = "metadata.json";
+
+    private final File tmpDir;
+
+    {
+        tmpDir = Files.createTempDir();
+        tmpDir.deleteOnExit();
+    }
 
     public void write(VariableAlignment va, WorkQueue<File> progressPipe) throws IOException {
-        final File tmpDir = Files.createTempDir();
-        tmpDir.deleteOnExit();
         for (Pair<VariableAssignment, VariableFit> pvv : va) {
             final VariableAssignment vas = pvv.getValue0();
             final VariableFit vf = pvv.getValue1();
@@ -108,17 +116,31 @@ public class NetCDFWriter {
         }
     }
 
-    private void printFile(File f) throws IOException {
-        System.out.println("Written file of length " + f.length());
-        byte[] bFile = new byte[(int) f.length()];
+    public void writeMeta(Metadata meta, WorkQueue<File> progressPipe) throws IOException {
+        File f = tmpDir.toPath().resolve(META_NAME).toFile();
+        MetaSinkFactory sinkF = new GsonSink.FileFactory(f);
+        try (MetaSink sink = sinkF.create()) {
+            sink.sink(meta);
 
-        try (FileInputStream fis = new FileInputStream(f)) {
-            fis.read(bFile);
+        } catch (Exception ex) {
+            throw new IOException(ex);
         }
-        String h = Hex.encodeHexString(bFile);
-        System.out.println(h);
+        LOG.info("Wrote metadata file {}.", f.getAbsolutePath());
+        if (progressPipe != null) {
+            progressPipe.put(f);
+        }
     }
 
+//    private void printFile(File f) throws IOException {
+//        System.out.println("Written file of length " + f.length());
+//        byte[] bFile = new byte[(int) f.length()];
+//
+//        try (FileInputStream fis = new FileInputStream(f)) {
+//            fis.read(bFile);
+//        }
+//        String h = Hex.encodeHexString(bFile);
+//        System.out.println(h);
+//    }
     private String generateFileNamePrefix(VariableAssignment vas) {
         StringBuilder sb = new StringBuilder();
         vas.infVariables.forEach(v -> {

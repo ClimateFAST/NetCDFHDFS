@@ -24,15 +24,20 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.typesafe.config.Config;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.climate.fast.common.Metadata;
+import se.kth.climate.fast.common.MetadataBuilder;
 import se.kth.climate.fast.netcdf.aligner.AssignmentQualityMeasure;
 import se.kth.climate.fast.netcdf.aligner.BlockAligner;
 import se.kth.climate.fast.netcdf.aligner.MeasureRegister;
 import se.kth.climate.fast.netcdf.aligner.VariableAlignment;
+import se.kth.climate.fast.netcdf.metadata.MetaConverter;
 import ucar.nc2.NetcdfFile;
 
 /**
@@ -60,17 +65,22 @@ public class LocalImporter implements Runnable {
         LocalSink ls = new LocalSink();
         ListeningExecutorService executor = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
         ListenableFuture lsF = executor.submit(ls);
+        List<Metadata> metas = new ArrayList<>(ncfiles.length);
+        NetCDFWriter writer = new NetCDFWriter();
         try {
             for (NetcdfFile ncfile : ncfiles) {
                 LOG.info("Processing input file {}", ncfile.getLocation());
                 MetaInfo mInfo = MetaInfo.fromNetCDF(ncfile);
+                Metadata meta = MetaConverter.convert(ncfile, mInfo);
+                metas.add(meta);
                 BlockAligner aligner = new BlockAligner(blockSize, mInfo, aqm);
                 VariableAlignment va = aligner.align();
                 LOG.info("Chosen alignment: {}", va);
-                NetCDFWriter writer = new NetCDFWriter();
                 writer.write(va, ls.progressPipe);
                 LOG.info("Finished input file: {}", ncfile.getLocation());
             }
+            Metadata metameta = MetadataBuilder.merge(metas);
+            writer.writeMeta(metameta, ls.progressPipe);
         } catch (IOException ex) {
             LOG.error("Error during processing.", ex);
             throw new RuntimeException(ex);
