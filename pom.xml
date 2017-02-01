@@ -1,16 +1,20 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>se.kth.climate.fast</groupId>
-    <artifactId>netcdf-hdfs-importer</artifactId>
-    <version>0.4-SNAPSHOT</version>
-    <packaging>jar</packaging>
-    <name>NetCDF HDFS Importer</name>
-    <!--<url>http://maven.apache.org</url>//-->
+    <artifactId>netcdf-hdfs</artifactId>
+    <version>0.5-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>NetCDF HDFS</name>
+
     <properties>
         <java.compiler.version>1.8</java.compiler.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- <hops.version>2.7.3</hops.version>
+        <hadoop.version>2.7.3</hadoop.version> -->
         <hops.version>2.4.0</hops.version>
+        <hadoop.version>2.7.3</hadoop.version>
     </properties>
+
     <licenses>
         <license>
             <name>GNU General Public License Version 2</name>
@@ -18,95 +22,41 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <modules>
+        <module>shared</module>
+        <module>importer</module>
+        <module>aligner</module>
+        <module>hadoop</module>
+    </modules>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.5</version>
-            <scope>compile</scope>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.22</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>18.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>parquet-common</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>parquet-encoding</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>parquet-column</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>parquet-hadoop</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>parquet-avro</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>1.7.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro-mapred</artifactId>
-            <version>1.7.6</version>
-        </dependency>
-        <!--  <dependency><groupId>edu.ucar</groupId><artifactId>netcdfAll</artifactId><version>4.6.4</version></dependency>//-->
-        <dependency>
-            <groupId>edu.ucar</groupId>
-            <artifactId>cdm</artifactId>
-            <version>4.6.4</version>
-        </dependency>
-        <dependency>
-            <groupId>io.hops</groupId>
-            <artifactId>hadoop-client</artifactId>
-            <version>${hops.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.httpcomponents</groupId>
-                    <artifactId>httpclient</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>commons-cli</groupId>
-            <artifactId>commons-cli</artifactId>
-            <version>1.3.1</version>
-        </dependency>
+        </dependency>       
         <dependency>
             <groupId>se.kth.climate.fast</groupId>
             <artifactId>common</artifactId>
             <version>1.3</version>
         </dependency>
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.7</version>
-        </dependency>
-        <dependency>
             <groupId>org.javatuples</groupId>
             <artifactId>javatuples</artifactId>
             <version>1.2</version>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-core</artifactId>
-            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.functionaljava</groupId>
@@ -123,23 +73,8 @@
             <artifactId>functionaljava-java-core</artifactId>
             <version>4.6</version>
         </dependency>
-        <dependency>
-            <groupId>org.choco-solver</groupId>
-            <artifactId>choco-solver</artifactId>
-            <version>4.0.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jgrapht</groupId>
-                    <artifactId>jgrapht-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>1.3.1</version>
-        </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -156,46 +91,6 @@
                     <showDeprecations>true</showDeprecations>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>com.github.ferstl</groupId>
-                <artifactId>depgraph-maven-plugin</artifactId>
-                <version>1.0.2</version>
-                <configuration>
-                    <showConflicts>true</showConflicts>
-                    <showDuplicates>true</showDuplicates>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>2.3</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <shadedClassifierName>shaded</shadedClassifierName>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>se.kth.climate.fast.netcdf.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>application.conf</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
         <extensions>
             <extension>
@@ -205,6 +100,7 @@
             </extension>
         </extensions>
     </build>
+
     <repositories>
         <repository>
             <id>sics-release</id>
@@ -251,6 +147,7 @@
             </snapshots>
         </repository>
     </repositories>
+
     <distributionManagement>
         <repository>
             <id>sics-release-repository</id>
@@ -264,12 +161,13 @@
         </snapshotRepository>
         <downloadUrl>http://kompics.sics.se/maven/repository</downloadUrl>
     </distributionManagement>
+
     <developers>
         <developer>
             <id>lkroll</id>
             <name>Lars Kroll</name>
-            <email>lkr&gt;lars-kroll.com</email>
-            <url>http://www.lars-kroll.com</url>
+            <email>lkroll&gt;kth.se</email>
+            <url>https://www.kth.se/profile/lkroll</url>
             <organization>Royal Institute of Technology (KTH)</organization>
             <organizationUrl>http://www.kth.se/ict/</organizationUrl>
             <roles>

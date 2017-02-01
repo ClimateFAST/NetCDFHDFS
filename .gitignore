@@ -12,7 +12,8 @@
 hs_err_pid*
 
 # Build
-/target/
+*/target/*
 
 # Netbeans
 nbactions.xml
+nb-configuration.xml
