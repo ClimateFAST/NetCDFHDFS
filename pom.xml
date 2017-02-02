@@ -11,7 +11,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- <hops.version>2.7.3</hops.version>
         <hadoop.version>2.7.3</hadoop.version> -->
-        <hops.version>2.4.0</hops.version>
+        <hops.version>2.7.3</hops.version>
         <hadoop.version>2.7.3</hadoop.version>
     </properties>
 

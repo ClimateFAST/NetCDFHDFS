@@ -19,19 +19,18 @@ package se.kth.climate.fast.netcdf.hadoop;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
-import ucar.nc2.NetcdfFile;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class TestReducer extends Reducer<Text, NetcdfFile, Text, Text> {
+public class TestReducer extends Reducer<Text, NCWriteable, Text, Text> {
 
     @Override
-    protected void reduce(Text key, Iterable<NetcdfFile> values, Context context) throws java.io.IOException, InterruptedException {
+    protected void reduce(Text key, Iterable<NCWriteable> values, Context context) throws java.io.IOException, InterruptedException {
         StringBuilder sb = new StringBuilder();
-        for (NetcdfFile value : values) {
-            sb.append(value.getDetailInfo());
+        for (NCWriteable value : values) {
+            sb.append(value.get().getDetailInfo());
         }
         String res = sb.toString();
         System.out.println("Reduced: " + key.toString() + " -> " + res);

@@ -19,21 +19,21 @@ package se.kth.climate.fast.netcdf.hadoop;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-import ucar.nc2.NetcdfFile;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class TestMapper extends Mapper<Void, NetcdfFile, Text, NetcdfFile> {
+public class TestMapper extends Mapper<Void, NCWriteable, Text, NCWriteable> {
 
     private final Text status = new Text();
 
     @Override
-    protected void map(Void key, NetcdfFile value, Mapper.Context context)
+    protected void map(Void key, NCWriteable value, Mapper.Context context)
             throws java.io.IOException, InterruptedException {
 
-        status.set(value.getTitle());
+        status.set(value.get().getTitle());
+        System.out.println("Mapping: " + status.toString());
         context.write(status, value);
 
     }

@@ -29,19 +29,19 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.nc2.NetcdfFile;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class NetCDFFileReader extends RecordReader<Void, NetcdfFile> {
+public class NetCDFFileReader extends RecordReader<Void, NCWriteable> {
 
     static final Logger LOG = LoggerFactory.getLogger(NetCDFFileReader.class);
     // 
-    private Optional<NetcdfFile> ncfileO = Optional.absent();
+    private Optional<NCWriteable> ncfileO = Optional.absent();
     private boolean loaded = false;
     private boolean read = false;
+    private FSDataInputStream istream = null;
 
     @Override
     public void initialize(InputSplit is, TaskAttemptContext tac) throws IOException, InterruptedException {
@@ -56,13 +56,14 @@ public class NetCDFFileReader extends RecordReader<Void, NetcdfFile> {
                 throw new IOException("NetCDF file is not appropriately block aligned! Cannot guarantee corrent read. (len=" + split.getLength() + ", bs=" + bs + ")");
             }
             int len = (int) split.getLength(); //fstat.getLen();
-            FSDataInputStream istream = fs.open(p, (int) bs);
+            istream = fs.open(p, (int) bs);
             istream.seek(split.getStart());
             byte[] data = new byte[len];
             istream.read(data);
-            NetcdfFile ncfile = NetcdfFile.openInMemory(p.getName(), data);
-            ncfile.setTitle(p.getName());
-            ncfileO = Optional.of(ncfile);
+            NCWriteable ncw = NCWriteable.fromRaw(data, p.getName());
+            //NetcdfFile ncfile = NetcdfFile.openInMemory(p.getName(), data);
+            ncw.get().setTitle(p.getName()); // FIXME not really the right thing to put there
+            ncfileO = Optional.of(ncw);
             loaded = true;
             LOG.info("Using {} ({} x {})", new Object[]{split.getPath(), fstat, fs.getDefaultBlockSize(p)});
         } else {
@@ -86,7 +87,7 @@ public class NetCDFFileReader extends RecordReader<Void, NetcdfFile> {
     }
 
     @Override
-    public NetcdfFile getCurrentValue() throws IOException, InterruptedException {
+    public NCWriteable getCurrentValue() throws IOException, InterruptedException {
         if (ncfileO.isPresent()) {
             return ncfileO.get();
         } else {
@@ -108,9 +109,13 @@ public class NetCDFFileReader extends RecordReader<Void, NetcdfFile> {
 
     @Override
     public void close() throws IOException {
-        if (ncfileO.isPresent()) {
-            NetcdfFile ncfile = ncfileO.get();
-            ncfile.close();
+//        if (ncfileO.isPresent()) {
+//            NetcdfFile ncfile = ncfileO.get();
+//            ncfile.close();
+//        }
+        if (istream != null) {
+            istream.close();
+            istream = null;
         }
     }
 

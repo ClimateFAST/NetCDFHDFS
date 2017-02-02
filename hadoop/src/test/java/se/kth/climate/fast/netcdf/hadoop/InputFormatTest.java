@@ -27,7 +27,6 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import ucar.nc2.NetcdfFile;
 
 /**
  *
@@ -52,7 +51,7 @@ public class InputFormatTest {
             job.setMapperClass(TestMapper.class);
             job.setReducerClass(TestReducer.class);
             job.setMapOutputKeyClass(Text.class);
-            job.setMapOutputValueClass(NetcdfFile.class);
+            job.setMapOutputValueClass(NCWriteable.class);
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(Text.class);
             FileInputFormat.addInputPath(job, new Path("hdfs://bbc6.sics.se:26801/FAST/tasminmax_Amon_EC_EARTH_historical_r2i1p1_195001_201212"));

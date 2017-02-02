@@ -18,16 +18,15 @@
 package se.kth.climate.fast.netcdf.hadoop;
 
 import org.apache.hadoop.mapreduce.RecordReader;
-import ucar.nc2.NetcdfFile;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class NetCDFFileFormat extends NetCDFInputFormat<NetcdfFile> {
+public class NetCDFFileFormat extends NetCDFInputFormat<NCWriteable> {
 
     @Override
-    public RecordReader<Void, NetcdfFile> getReader() {
+    public RecordReader<Void, NCWriteable> getReader() {
         return new NetCDFFileReader();
     }
 
