@@ -17,6 +17,9 @@
  */
 package se.kth.climate.fast.netcdf;
 
+import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import java.io.File;
 import java.io.IOException;
@@ -63,16 +66,17 @@ public class NetCDFWriter {
         for (Pair<VariableAssignment, VariableFit> pvv : va) {
             final VariableAssignment vas = pvv.getValue0();
             final VariableFit vf = pvv.getValue1();
-            final String fnameP = generateFileNamePrefix(vas);
             for (DataDescriptor dd : vf.dataDescriptors) {
-                String fname;
+                FileInfo fi;
                 if (dd.splitDim.isPresent()) {
                     DimensionRange dr = dd.dims.get(dd.splitDim.get());
-                    fname = fnameP + String.valueOf(dr.start) + "-" + String.valueOf(dr.end) + SUFFIX;
+                    ImmutableList<String> vars = ImmutableList.copyOf(Collections2.filter(dd.vars,
+                            Predicates.not(Predicates.equalTo(dd.splitDim.get()))));
+                    fi = new FileInfo(vars, dr);
                 } else {
-                    fname = fnameP + "full" + SUFFIX;
+                    fi = new FileInfo(dd.vars.asList());
                 }
-
+                String fname = FileNameFormat.serialise(fi) + SUFFIX;
                 File f = tmpDir.toPath().resolve(fname).toFile();
                 if (f.createNewFile()) {
                     try (NetcdfFileWriter writer = NetcdfFileWriter.createNew(NetcdfFileWriter.Version.netcdf3, f.getAbsolutePath())) {

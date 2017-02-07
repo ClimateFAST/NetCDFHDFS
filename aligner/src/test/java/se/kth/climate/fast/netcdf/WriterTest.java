@@ -17,25 +17,56 @@
  */
 package se.kth.climate.fast.netcdf;
 
+import com.google.gson.Gson;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import se.kth.climate.fast.common.Metadata;
+import se.kth.climate.fast.netcdf.testing.FileGenerator;
 
 /**
  *
  * @author lkroll
  */
 public class WriterTest {
-    
+
     public WriterTest() {
     }
-    
+
+    private WorkQueue<File> q;
+    private FileGenerator fg;
+
+    @Before
+    public void setUp() {
+        q = new WorkQueue<File>(1000);
+        fg = new FileGenerator(10000000);
+    }
+
+    // handled in the AlignerTest
+//    @Test
+//    public void testWriter() {
+//        NetCDFWriter writer = new NetCDFWriter();
+////        try {
+////            writer.write();
+////        } catch (IOException ex) {
+////            ex.printStackTrace(System.err);
+////            Assert.fail(ex.getMessage());
+////        }
+//    }
     @Test
-    public void testWriter() {
+    public void testMetaData() throws IOException {
         NetCDFWriter writer = new NetCDFWriter();
-//        try {
-//            writer.write();
-//        } catch (IOException ex) {
-//            ex.printStackTrace(System.err);
-//            Assert.fail(ex.getMessage());
-//        }
+        Metadata m = fg.generateMeta();
+        writer.writeMeta(m, q);
+        File f = q.take().get(); // I know it must be in there due to sync write
+        f.deleteOnExit();
+        Assert.assertTrue(f.canRead());
+        String metaS = new String(Files.readAllBytes(f.toPath()));
+        Gson gson = new Gson();
+        Metadata m2 = gson.fromJson(metaS, Metadata.class);
+        Assert.assertTrue(fg.checkMeta(m));
     }
 }

@@ -28,7 +28,7 @@ import ucar.nc2.NetcdfFile;
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class NCWriteable implements Writable {
+public class NCWritable implements Writable {
 
     private NetcdfFile ncfile = null;
     private byte[] raw = null;
@@ -58,20 +58,20 @@ public class NCWriteable implements Writable {
         }
     }
 
-    NCWriteable(NetcdfFile ncfile, byte[] raw) {
+    NCWritable(NetcdfFile ncfile, byte[] raw) {
         this.ncfile = ncfile;
         this.raw = raw;
     }
     
-    private NCWriteable() {}
+    private NCWritable() {}
     
-    public static NCWriteable fromRaw(byte[] raw, String location) throws IOException {
+    public static NCWritable fromRaw(byte[] raw, String location) throws IOException {
         NetcdfFile ncfile = NetcdfFile.openInMemory(location, raw);
-        return new NCWriteable(ncfile, raw);
+        return new NCWritable(ncfile, raw);
     }
     
-    public static NCWriteable read(DataInput in) throws IOException {
-        NCWriteable w = new NCWriteable();
+    public static NCWritable read(DataInput in) throws IOException {
+        NCWritable w = new NCWritable();
         w.readFields(in);
         return w;
     }

@@ -17,28 +17,54 @@
  */
 package se.kth.climate.fast.netcdf.hadoop;
 
+import com.google.common.collect.Iterables;
+import com.google.common.io.Files;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+import se.kth.climate.fast.netcdf.testing.FileGenerator;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
+@RunWith(JUnit4.class)
 public class InputFormatTest {
+
+    private static final long FSIZE = 200 * 1024 * 1024;
 
     public InputFormatTest() {
     }
 
+    private File dir;
+    private Path out;
+    private FileGenerator fgen;
+
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
+        dir = Files.createTempDir();
+        dir.deleteOnExit();
+        fgen = new FileGenerator(FSIZE);
+        List<java.nio.file.Path> files = fgen.generateBlocks(dir, 7);
+        for (java.nio.file.Path p : files) {
+            File f = p.toFile();
+            f.deleteOnExit();
+        }
+        out = (new Path(dir.getAbsolutePath())).suffix("/output.txt");
+        System.out.println("Generated files: " + Iterables.toString(files));
     }
 
     @Test
@@ -46,18 +72,33 @@ public class InputFormatTest {
 
         try {
             Configuration conf = new Configuration();
+            String sep = ":";
+            conf.set(TextOutputFormat.SEPERATOR, sep);
             Job job = Job.getInstance(conf, "input format test");
             job.setJarByClass(InputFormatTest.class);
             job.setMapperClass(TestMapper.class);
             job.setReducerClass(TestReducer.class);
             job.setMapOutputKeyClass(Text.class);
-            job.setMapOutputValueClass(NCWriteable.class);
+            job.setMapOutputValueClass(CountSumWritable.class);
             job.setOutputKeyClass(Text.class);
-            job.setOutputValueClass(Text.class);
-            FileInputFormat.addInputPath(job, new Path("hdfs://bbc6.sics.se:26801/FAST/tasminmax_Amon_EC_EARTH_historical_r2i1p1_195001_201212"));
+            job.setOutputValueClass(CountSumWritable.class);
+            FileInputFormat.addInputPath(job, new Path(dir.toURI()));
             job.setInputFormatClass(NetCDFFileFormat.class);
-            job.setOutputFormatClass(NullOutputFormat.class);
-            System.exit(job.waitForCompletion(true) ? 0 : 1);
+            job.setOutputFormatClass(TextOutputFormat.class);
+            TextOutputFormat.setOutputPath(job, out);
+            boolean res = job.waitForCompletion(true);
+            Assert.assertTrue(res);
+            File fout = new File(out.suffix("/part-r-00000").toString());
+            System.out.println("Reading " + fout.getAbsolutePath());
+            try (BufferedReader in = new BufferedReader(new FileReader(fout))) {
+                String line = in.readLine();
+                System.out.println("Read line \"" + line + "\" sep=" + sep);
+                String[] kv = line.split(sep);
+                Assert.assertEquals(3, kv.length);
+                int count = Integer.parseInt(kv[1]);
+                long sum = Long.parseLong(kv[2]);
+                Assert.assertTrue(fgen.checkBlockSum(sum, count));
+            }
         } catch (IOException | InterruptedException | ClassNotFoundException ex) {
             ex.printStackTrace(System.err);
             Assert.fail(ex.getMessage());

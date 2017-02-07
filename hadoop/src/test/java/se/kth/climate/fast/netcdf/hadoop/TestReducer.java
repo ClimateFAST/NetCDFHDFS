@@ -24,16 +24,18 @@ import org.apache.hadoop.mapreduce.Reducer;
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class TestReducer extends Reducer<Text, NCWriteable, Text, Text> {
+public class TestReducer extends Reducer<Text, CountSumWritable, Text, CountSumWritable> {
 
     @Override
-    protected void reduce(Text key, Iterable<NCWriteable> values, Context context) throws java.io.IOException, InterruptedException {
+    protected void reduce(Text key, Iterable<CountSumWritable> values, Context context) throws java.io.IOException, InterruptedException {
         StringBuilder sb = new StringBuilder();
-        for (NCWriteable value : values) {
-            sb.append(value.get().getDetailInfo());
+        long sum = 0;
+        int count = 0;
+        for (CountSumWritable value : values) {
+            count += value.getCount();
+            sum += value.getSum();
         }
-        String res = sb.toString();
-        System.out.println("Reduced: " + key.toString() + " -> " + res);
-        context.write(key, new Text(res));
+        System.out.println("Reduced: " + key.toString() + " -> " + count + " -> " + sum);
+        context.write(key, new CountSumWritable(count, sum));
     }
 }

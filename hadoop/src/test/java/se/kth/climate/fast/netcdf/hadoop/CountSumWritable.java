@@ -17,17 +17,51 @@
  */
 package se.kth.climate.fast.netcdf.hadoop;
 
-import org.apache.hadoop.mapreduce.RecordReader;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import org.apache.hadoop.io.Writable;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class NetCDFFileFormat extends NetCDFInputFormat<NCWritable> {
+public class CountSumWritable implements Writable {
+
+    private int count;
+    private long sum;
+
+    public int getCount() {
+        return count;
+    }
+
+    public long getSum() {
+        return sum;
+    }
+
+    public CountSumWritable() {
+    }
+
+    public CountSumWritable(int count, long sum) {
+        this.count = count;
+        this.sum = sum;
+    }
 
     @Override
-    public RecordReader<Void, NCWritable> getReader() {
-        return new NetCDFFileReader();
+    public void write(DataOutput d) throws IOException {
+        d.writeInt(count);
+        d.writeLong(sum);
+    }
+
+    @Override
+    public void readFields(DataInput di) throws IOException {
+        count = di.readInt();
+        sum = di.readLong();
+    }
+
+    @Override
+    public String toString() {
+        return Integer.toString(count) + ":" + Long.toString(sum);
     }
 
 }

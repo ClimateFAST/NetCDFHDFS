@@ -34,11 +34,11 @@ import org.slf4j.LoggerFactory;
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class NetCDFFileReader extends RecordReader<Void, NCWriteable> {
+public class NetCDFFileReader extends RecordReader<Void, NCWritable> {
 
     static final Logger LOG = LoggerFactory.getLogger(NetCDFFileReader.class);
     // 
-    private Optional<NCWriteable> ncfileO = Optional.absent();
+    private Optional<NCWritable> ncfileO = Optional.absent();
     private boolean loaded = false;
     private boolean read = false;
     private FSDataInputStream istream = null;
@@ -60,7 +60,7 @@ public class NetCDFFileReader extends RecordReader<Void, NCWriteable> {
             istream.seek(split.getStart());
             byte[] data = new byte[len];
             istream.read(data);
-            NCWriteable ncw = NCWriteable.fromRaw(data, p.getName());
+            NCWritable ncw = NCWritable.fromRaw(data, p.getName());
             //NetcdfFile ncfile = NetcdfFile.openInMemory(p.getName(), data);
             ncw.get().setTitle(p.getName()); // FIXME not really the right thing to put there
             ncfileO = Optional.of(ncw);
@@ -87,7 +87,7 @@ public class NetCDFFileReader extends RecordReader<Void, NCWriteable> {
     }
 
     @Override
-    public NCWriteable getCurrentValue() throws IOException, InterruptedException {
+    public NCWritable getCurrentValue() throws IOException, InterruptedException {
         if (ncfileO.isPresent()) {
             return ncfileO.get();
         } else {

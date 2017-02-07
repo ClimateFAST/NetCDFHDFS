@@ -57,6 +57,16 @@ public class DimensionRange {
         sb.append(")");
         return sb.toString();
     }
+    
+    public String toName() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(name);
+        sb.append('_');
+        sb.append(start);
+        sb.append('-');
+        sb.append(end);
+        return sb.toString();
+    }
 
     public Range toRange() {
         return toRange(1);

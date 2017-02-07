@@ -109,7 +109,7 @@ public class BlockFitter {
         }
         long perBlockSize = (long) Math.floor(blockRatio * ((double) dr1.getSize()));
         LOG.debug("Splitting over {} with {} slices per block", dr1, perBlockSize);
-        if (perBlockSize > 0) { // this should fit with at least a single slice per file
+        while (perBlockSize > 0) { // this should fit with at least a single slice per file
             // generate sub ranges
             List<DimensionRange> subRanges = new LinkedList<>();
             long offset = dr1.start;
@@ -132,15 +132,17 @@ public class BlockFitter {
             if (firstSize < blockLimit()) {
                 return Pair.with(va, VariableFit.fromDataDescriptors(ImmutableList.copyOf(newDDs)));
             } else {
-                // TODO write a more flexible fitter, that tries decrements of ranges until it fits (if possible)
-                throw new FittingException("It should have fit, but it decided not to. Estimated size was "
-                        + firstSize + "bytes of limit " + blockLimit() + "bytes."
-                        + " Complain to the devs to write a better fitting algorithm.", va, newDDs.get(0));
+                perBlockSize--;
+//                // TODO write a more flexible fitter, that tries decrements of ranges until it fits (if possible)
+//                throw new FittingException("It should have fit, but it decided not to. Estimated size was "
+//                        + firstSize + "bytes of limit " + blockLimit() + "bytes."
+//                        + " Complain to the devs to write a better fitting algorithm.", va, newDDs.get(0));
             }
             // TODO write a tigher fitter, that tries increments of ranges to waste less space where dimensions impact multiple variables
-        } else { // this won't fit...could split along a different dimension but for now just throw an exception
-            throw new FittingException("Splitting over multiple dimensions not yet implemented!", va, initialDD);
         }
+        // this won't fit...could split along a different dimension but for now just throw an exception
+            throw new FittingException("Splitting over multiple dimensions not yet implemented!", va, initialDD);
+        
     }
 
     private Pair<VariableAssignment, DataDescriptor> va2ddFull(VariableAssignment va) {

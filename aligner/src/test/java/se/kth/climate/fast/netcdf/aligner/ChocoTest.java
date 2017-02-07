@@ -74,6 +74,7 @@ public class ChocoTest {
             solutions.add(solution);
             numS++;
         }
+        // not a real test...just trying to figure out how choco works
         System.out.println("Done (" + numS + " solutions found, "+solutions.size()+" recorded).");
         System.out.println("Solutions:\n" + solutions);
     }

@@ -19,22 +19,30 @@ package se.kth.climate.fast.netcdf.hadoop;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.javatuples.Pair;
+import se.kth.climate.fast.netcdf.testing.FileGenerator;
+import ucar.nc2.NetcdfFile;
 
 /**
  *
  * @author Lars Kroll <lkroll@kth.se>
  */
-public class TestMapper extends Mapper<Void, NCWriteable, Text, NCWriteable> {
+public class TestMapper extends Mapper<Void, NCWritable, Text, CountSumWritable> {
 
     private final Text status = new Text();
 
     @Override
-    protected void map(Void key, NCWriteable value, Mapper.Context context)
+    protected void map(Void key, NCWritable value, Mapper.Context context)
             throws java.io.IOException, InterruptedException {
 
-        status.set(value.get().getTitle());
-        System.out.println("Mapping: " + status.toString());
-        context.write(status, value);
+        status.set("test"); // map all to the same key
+        NetcdfFile ncfile = value.get();
+        Pair<Integer, Long> cs = FileGenerator.sumBlock(ncfile);
+        if (cs.getValue1() > -1) {
+            context.write(status, new CountSumWritable(cs.getValue0(), cs.getValue1()));
+        } else {
+            System.err.println("Invalid mapper result < 0! Ignoring record.");
+        }
 
     }
 }
