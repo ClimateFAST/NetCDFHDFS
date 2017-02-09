@@ -17,10 +17,12 @@
  */
 package se.kth.climate.fast.netcdf;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
+import com.google.common.primitives.Ints;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -29,7 +31,9 @@ import java.util.stream.Collectors;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static se.kth.climate.fast.FASTConstants.META_NAME;
 import se.kth.climate.fast.common.Metadata;
+import static se.kth.climate.fast.netcdf.NetCDFConstants.SUFFIX;
 import se.kth.climate.fast.netcdf.aligner.VariableAlignment;
 import se.kth.climate.fast.netcdf.aligner.VariableAssignment;
 import se.kth.climate.fast.netcdf.aligner.VariableFit;
@@ -51,9 +55,8 @@ import ucar.nc2.Variable;
 public class NetCDFWriter {
 
     static final Logger LOG = LoggerFactory.getLogger(NetCDFWriter.class);
-
-    public static final String SUFFIX = ".nc";
-    public static final String META_NAME = "metadata.json";
+    
+    
 
     private final File tmpDir;
 
@@ -72,7 +75,18 @@ public class NetCDFWriter {
                     DimensionRange dr = dd.dims.get(dd.splitDim.get());
                     ImmutableList<String> vars = ImmutableList.copyOf(Collections2.filter(dd.vars,
                             Predicates.not(Predicates.equalTo(dd.splitDim.get()))));
-                    fi = new FileInfo(vars, dr);
+                    Variable dimV = dd.metaInfo.getVariable(dd.splitDim.get());
+                    if (dimV == null || (dimV.getDimensions().size() != 1)) {
+                        fi = new FileInfo(vars, dr);
+                    } else { // single dimension variable
+                        Array data = dimV.read(); // maybe too big, but should be ok
+                        Optional<TypedRange> tr = TypedRange.fromArray(data, Ints.checkedCast(dr.start), Ints.checkedCast(dr.end));
+                        if (tr.isPresent()) {
+                            fi = new FileInfo(vars, tr.get(), dr);
+                        } else {
+                            fi = new FileInfo(vars, dr);
+                        }
+                    }
                 } else {
                     fi = new FileInfo(dd.vars.asList());
                 }

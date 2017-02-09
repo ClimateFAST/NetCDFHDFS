@@ -38,6 +38,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.climate.fast.FASTConstants;
 import se.kth.climate.fast.netcdf.hdfs.HDFSImporter;
 import ucar.nc2.NetcdfFile;
 
@@ -57,6 +58,11 @@ public class Main {
         try {
             CommandLineParser cliparser = new DefaultParser();
             cmd = cliparser.parse(opts, args);
+            
+            if (cmd.hasOption("h")) {
+                formatter.printHelp("nchdfs <options> <source files>", opts);
+                System.exit(0);
+            }
 
             // FILES
             String[] fileNames = cmd.getArgs();
@@ -81,6 +87,10 @@ public class Main {
             if (cmd.hasOption("b")) {
                 String bs = cmd.getOptionValue("b");
                 conf = conf.withValue("nchdfs.blockSize", ConfigValueFactory.fromAnyRef(bs, "commandline argument"));
+            }
+            // merge
+            if (cmd.hasOption("c")) {
+                conf = conf.withValue("nchdfs.merge", ConfigValueFactory.fromAnyRef(true, "commandline argument"));
             }
 
             // OPEN NetCDF files
@@ -110,7 +120,7 @@ public class Main {
                     LOG.info("Import complete.");
                 } else if (cmd.hasOption("r")) {
                     // HDFS MODE
-                    String hdfsPath = cmd.getOptionValue("r");                    
+                    String hdfsPath = cmd.getOptionValue("r");
                     String hdfsUser = cmd.hasOption("u") ? cmd.getOptionValue("u") : System.getProperty("user.name");
                     HDFSImporter importer = new HDFSImporter(ncfiles, conf, hdfsUser, hdfsPath);
                     checkOrExit(importer.prepare(), "Connection to HDFS failed!");
@@ -146,14 +156,15 @@ public class Main {
         Options opts = new Options();
 
         opts.addOption("l", true, "Run in local mode and place output in <arg>");
-        opts.addOption("b", true, "Force block size to <arg> (Default 64MB (from config file) in local mode , or server value in HDFS mode)");
+        opts.addOption("b", true, "Force block size to <arg> (Default 64MB (from config file) in local mode, or server value in HDFS mode)");
         opts.addOption("t", true, "Title to use for merged file scheme (Default is longest common prefix of source files)");
         opts.addOption("f", false, "Force override existsing files");
         opts.addOption("m", false, "Metadata only");
         opts.addOption("r", true, "Write remotely into HDFS at <arg> (can not be used together with -l)");
         opts.addOption("u", true, "Write as HDFS user <arg> (use together with -r)");
+        opts.addOption("c", "merge", false, "Merge (concatenate) aligned blocks into a single file that ends in " + FASTConstants.MERGED_SUFFIX + " instead of " + NetCDFConstants.SUFFIX + " (remote only, EXPERIMENTAL)");
         //opts.addOption("metaformat", true, "File format for exported meta data. Options are {json, avro}");
-
+        opts.addOption("h", "help", false, "Print help");
         return opts;
     }
 

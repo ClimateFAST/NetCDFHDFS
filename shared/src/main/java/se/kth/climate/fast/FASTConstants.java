@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 KTH Royal Institute of Technology
+ * Copyright (C) 2017 KTH Royal Institute of Technology
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,20 +15,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.climate.fast.netcdf;
+package se.kth.climate.fast;
 
 /**
  *
- * @author lkroll
+ * @author Lars Kroll <lkroll@kth.se>
  */
-public abstract class NetCDFConstants {
-
-    public static final int MAGIC_SIZE = 4;
-    public static final int TAG_SIZE = 4;
-    public static final int N_SIZE = 4;
-    public static final int OFFSET_SIZE = 8;
-    public static final int DTYPE_SIZE = 4;
-    public static final int ALIGN_SIZE = 8;
-    public static final int PADDING_SIZE = 4;
-    public static final String SUFFIX = ".nc";
+public class FASTConstants {
+    public static final String MERGED_SUFFIX = ".ncm";
+    public static final String MERGED_NAME = "merged";
+    public static final String ENC_SCHEME = "UTF-8";
+    public static final String META_NAME = "metadata.json";
 }

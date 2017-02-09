@@ -19,7 +19,6 @@ package se.kth.climate.fast.netcdf;
 
 import com.google.common.base.Optional;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +39,11 @@ public abstract class FileNameFormat {
     public static String serialise(FileInfo info) {
         StringBuilder sb = new StringBuilder();
         info.vars.forEach(v -> {
-            sb.append(v);
+            sb.append(FileInfoEscaper.INSTANCE.escape(v));
             sb.append(SEP);
         });
         if (info.splitVar.isPresent()) {
-            sb.append(info.splitVar.get());
+            sb.append(FileInfoEscaper.INSTANCE.escape(info.splitVar.get()));
             sb.append(TypedRange.SEP);
             int buIndex = sb.length();
             try {
@@ -83,8 +82,12 @@ public abstract class FileNameFormat {
         if (s1.length == 1) {
             if (varsS.endsWith(FULL_KEY)) {
                 String[] varSplit = varsS.split(SEP);
-                List<String> vars = new ArrayList(Arrays.asList(varSplit)); // copy so we can remove next
-                vars.remove(vars.size() - 1); // last one is FULL_KEY
+                List<String> vars = new ArrayList();
+                for (int i = 0; i < (varSplit.length - 1); i++) { // last one is FULL_KEY
+                    String var = varSplit[i];
+                    String varUE = FileInfoEscaper.INSTANCE.unescape(var);
+                    vars.add(varUE);
+                }
                 return new FileInfo(vars);
             } else {
                 throw new IllegalArgumentException("String \"" + s + "\" has invalid format! Required: " + FORMAT_DESC);
@@ -92,7 +95,12 @@ public abstract class FileNameFormat {
         } else {
             String rangeS = s1[1];
             String[] varSplit = varsS.split(SEP);
-            List<String> vars = new ArrayList(Arrays.asList(varSplit)); // copy so we can remove next
+            List<String> vars = new ArrayList();
+            for (int i = 0; i < varSplit.length; i++) {
+                String var = varSplit[i];
+                String varUE = FileInfoEscaper.INSTANCE.unescape(var);
+                vars.add(varUE);
+            }
             String splitVar = vars.remove(vars.size() - 1); // last one is splitVar
             if (rangeS.equalsIgnoreCase(NONE_KEY)) {
                 return new FileInfo(vars, splitVar);

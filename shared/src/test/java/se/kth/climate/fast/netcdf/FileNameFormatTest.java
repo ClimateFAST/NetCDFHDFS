@@ -37,9 +37,9 @@ public class FileNameFormatTest {
     private final List<String> vars = new ArrayList<String>();
 
     {
-        vars.add("v1");
-        vars.add("v2");
-        vars.add("v3");
+        vars.add("v_1");
+        vars.add("v~2");
+        vars.add("v.3");
         //vars.add(splitVar);
     }
 

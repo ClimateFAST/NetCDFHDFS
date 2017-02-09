@@ -30,10 +30,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.climate.fast.FASTConstants;
+import se.kth.climate.fast.netcdf.NetCDFConstants;
 
 /**
  *
@@ -43,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public abstract class NetCDFInputFormat<T> extends FileInputFormat<Void, T> {
 
     static final Logger LOG = LoggerFactory.getLogger(NetCDFInputFormat.class);
-    
+
     public static void addInputPath(Job job, Path path) throws IOException {
         FileInputFormat.addInputPath(job, path);
     }
@@ -66,9 +69,18 @@ public abstract class NetCDFInputFormat<T> extends FileInputFormat<Void, T> {
             FileSystem fs = path.getFileSystem(job.getConfiguration());
             long length = file.getLen();
             BlockLocation[] blkLocations = fs.getFileBlockLocations(file, 0, length);
-            for (BlockLocation blk : blkLocations) {
-                splits.add(new FileSplit(path, blk.getOffset(), blk.getLength(),
-                        blk.getHosts()));
+            if (path.getName().endsWith(NetCDFConstants.SUFFIX)) { // read full file per record
+                if (blkLocations.length == 1) { // in this case we can try to collocate with the block
+                    splits.add(new CombineFileSplit(new Path[]{path}, new long[]{0}, new long[]{length}, blkLocations[0].getHosts()));
+                } else { // otherwise, whatever
+                    splits.add(new CombineFileSplit(new Path[]{path}, new long[]{length}));
+                }
+            } else if (path.getName().endsWith(FASTConstants.MERGED_SUFFIX)) {
+                // for this type each block will contain one NetCDF file
+                for (BlockLocation blk : blkLocations) {
+                    splits.add(new FileSplit(path, blk.getOffset(), blk.getLength(),
+                            blk.getHosts()));
+                }
             }
         }
         return splits;
@@ -83,7 +95,7 @@ public abstract class NetCDFInputFormat<T> extends FileInputFormat<Void, T> {
             FileStatus fs = it.next();
             if (fs.isFile()) {
                 Path p = fs.getPath();
-                if (!p.getName().endsWith(".nc")) {
+                if (!p.getName().endsWith(NetCDFConstants.SUFFIX) && !p.getName().endsWith(FASTConstants.MERGED_SUFFIX)) {
                     it.remove();
                 }
             }

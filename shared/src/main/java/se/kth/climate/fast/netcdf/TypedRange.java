@@ -26,6 +26,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import org.javatuples.Pair;
+import static se.kth.climate.fast.FASTConstants.ENC_SCHEME;
+import ucar.ma2.Array;
 import ucar.ma2.DataType;
 
 /**
@@ -34,7 +36,6 @@ import ucar.ma2.DataType;
  */
 public abstract class TypedRange {
 
-    static final String ENC_SCHEME = "UTF-8";
     static final String SEP = "~";
 
     protected final DataType type;
@@ -141,6 +142,29 @@ public abstract class TypedRange {
 
     public static TypedRange with(boolean start, boolean end) {
         return new BoolTypedRange(start, end);
+    }
+
+    public static Optional<TypedRange> fromArray(Array data, int start, int end) {
+        switch (data.getDataType()) {
+            case FLOAT:
+                return Optional.of(TypedRange.with(data.getFloat(start), data.getFloat(end)));
+            case DOUBLE:
+                return Optional.of(TypedRange.with(data.getDouble(start), data.getDouble(end)));
+            case LONG:
+                return Optional.of(TypedRange.with(data.getLong(start), data.getLong(end)));
+            case INT:
+                return Optional.of(TypedRange.with(data.getInt(start), data.getInt(end)));
+            case SHORT:
+                return Optional.of(TypedRange.with(data.getShort(start), data.getShort(end)));
+            case BYTE:
+                return Optional.of(TypedRange.with(data.getByte(start), data.getByte(end)));
+            case CHAR:
+                return Optional.of(TypedRange.with(data.getChar(start), data.getChar(end)));
+            case BOOLEAN:
+                return Optional.of(TypedRange.with(data.getBoolean(start), data.getBoolean(end)));
+            default:
+                return Optional.absent();
+        }
     }
 
     private static class FPTypedRange extends TypedRange {

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +67,33 @@ public class NetCDFFileReader extends RecordReader<Void, NCWritable> {
             ncfileO = Optional.of(ncw);
             loaded = true;
             LOG.info("Using {} ({} x {})", new Object[]{split.getPath(), fstat, fs.getDefaultBlockSize(p)});
+        }
+        if (is instanceof CombineFileSplit) {
+            CombineFileSplit split = (CombineFileSplit) is;
+            if (split.getNumPaths() == 1) {
+                Path p = split.getPath(0);
+                FileSystem fs = p.getFileSystem(tac.getConfiguration());
+                FileStatus fstat = fs.getFileStatus(p);
+                long llen = split.getLength(0);
+                if (llen <= Integer.MAX_VALUE) {
+                    int len = (int) llen;
+                    long bs = fstat.getBlockSize();
+                    istream = fs.open(p, (int) bs);
+                    istream.seek(split.getOffset(0));
+                    byte[] data = new byte[len];
+                    istream.read(data);
+                    NCWritable ncw = NCWritable.fromRaw(data, p.getName());
+                    //NetcdfFile ncfile = NetcdfFile.openInMemory(p.getName(), data);
+                    ncw.get().setTitle(p.getName()); // FIXME not really the right thing to put there
+                    ncfileO = Optional.of(ncw);
+                    loaded = true;
+                    LOG.info("Using {} ({} x {})", new Object[]{split.getPath(0), fstat, fs.getDefaultBlockSize(p)});
+                } else {
+                    LOG.error("This file is too large to be buffered in memory: {} ({}bytes)", p, llen);
+                }
+            } else {
+                LOG.error("Only supporting single path per split for now, found {}", split.getNumPaths());
+            }
         } else {
             LOG.error("Expected FileSplit, found {}", is.getClass());
         }
