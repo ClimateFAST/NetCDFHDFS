@@ -17,8 +17,10 @@
  */
 package se.kth.climate.fast.netcdf.aligner;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
 import fj.data.Array;
 import fj.data.Either;
 import java.util.Arrays;
@@ -48,17 +50,31 @@ import ucar.nc2.Variable;
  * @author lkroll
  */
 public class BlockAligner {
-    
+
     static final Logger LOG = LoggerFactory.getLogger(BlockAligner.class);
 
     public final long blockSize;
     public final MetaInfo metaInfo;
     public final AssignmentQualityMeasure measure;
+    private final Config config;
+    private final Optional<String> splitDim;
 
-    public BlockAligner(long blockSize, MetaInfo mInfo, AssignmentQualityMeasure measure) {
+    public BlockAligner(long blockSize, MetaInfo mInfo, AssignmentQualityMeasure measure, Config conf) {
         this.blockSize = blockSize;
         this.metaInfo = mInfo;
         this.measure = measure;
+        this.config = conf;
+        if (config.hasPath("nchdfs.splitdim")) {
+            String dim = config.getString("nchdfs.splitdim");
+            if (metaInfo.ncfile.findDimension(dim) != null) {
+                LOG.info("Using split dimension: {}", dim);
+                splitDim = Optional.of(dim);
+            } else {
+                throw new IllegalArgumentException("Invalid dimension: " + dim);
+            }
+        } else {
+            splitDim = Optional.absent();
+        }
     }
 
     public VariableAlignment align() {
@@ -78,7 +94,7 @@ public class BlockAligner {
     }
 
     private VariableAlignment fit(List<VariableAssignment> vas) {
-        BlockFitter bf = new BlockFitter(vas, metaInfo, blockSize);
+        BlockFitter bf = new BlockFitter(vas, metaInfo, blockSize, splitDim);
         return bf.fit();
     }
 
@@ -116,6 +132,14 @@ public class BlockAligner {
             partVGs.forEach((vg) -> {
                 if (vg.var.isUnlimited()) {
                     infVariables.add(vg.var.getFullNameEscaped());
+                } else if (splitDim.isPresent()) {
+                    if (vg.var.getDimensions().stream().filter(d -> d.getFullNameEscaped().equals(splitDim.get())).count() == 1) {
+                        LOG.trace("Promoting {} to unlimited as it contains splitDim ({})", vg.var.getFullNameEscaped(), splitDim.get());
+                        infVariables.add(vg.var.getFullNameEscaped());
+                    } else {
+                        LOG.trace("{} does not contain splitDim ({})", vg.var.getFullNameEscaped(), splitDim.get());
+                        otherVariables.add(vg.var.getFullNameEscaped());
+                    }
                 } else {
                     otherVariables.add(vg.var.getFullNameEscaped());
                 }

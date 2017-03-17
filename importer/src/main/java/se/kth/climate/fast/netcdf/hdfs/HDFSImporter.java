@@ -73,7 +73,7 @@ public class HDFSImporter implements Runnable {
                 Metadata meta = MetaConverter.convert(ncfile, mInfo);
                 metas.add(meta);
                 LOG.info("Metadata for file {}:\n   {}", ncfile.getLocation(), meta);
-                BlockAligner aligner = new BlockAligner(blockSize, mInfo, aqm);
+                BlockAligner aligner = new BlockAligner(blockSize, mInfo, aqm, conf);
                 VariableAlignment va = aligner.align();
                 LOG.info("Chosen alignment: {}", va);
                 writer.write(va, sink.progressPipe);
@@ -101,10 +101,16 @@ public class HDFSImporter implements Runnable {
             return false;
         }
 
-        long blockSize = sink.rootFolderBlockSize();
-        if (blockSize > 0) {
-            LOG.info("Got block size of {} from HDFS namenode.", blockSize);
+        long blockSize;
+        if (conf.hasPath("nchdfs.blockSizeForced") && conf.getBoolean("nchdfs.blockSizeForced")) {
+            blockSize = conf.getBytes("nchdfs.blockSize");
+            LOG.info("Using block size of {} from command line.", blockSize);
+        } else {
+            blockSize = sink.rootFolderBlockSize();
             conf = conf.withValue("nchdfs.blockSize", ConfigValueFactory.fromAnyRef(blockSize, "HDFS info"));
+            LOG.info("Got block size of {} from HDFS namenode.", blockSize);
+        }
+        if (blockSize > 0) {
             String title = conf.getString("nchdfs.title");
             return sink.createProjectFolder(title);
         } else {

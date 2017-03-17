@@ -46,18 +46,20 @@ import ucar.nc2.Variable;
  * @author lkroll
  */
 public class BlockFitter {
-    
+
+    public static final long ESTIMATION_MARGIN = 100; //100bytes
     static final Logger LOG = LoggerFactory.getLogger(BlockFitter.class);
 
     private final List<VariableAssignment> vas;
     private final MetaInfo mInfo;
     private final long blockSize;
-    public static final long ESTIMATION_MARGIN = 100; //100bytes
+    private final Optional<String> splitDim;
 
-    public BlockFitter(List<VariableAssignment> vas, MetaInfo mi, long blockSize) {
+    public BlockFitter(List<VariableAssignment> vas, MetaInfo mi, long blockSize, Optional<String> splitDim) {
         this.vas = vas;
         this.mInfo = mi;
         this.blockSize = blockSize;
+        this.splitDim = splitDim;
     }
 
     public VariableAlignment fit() {
@@ -96,7 +98,7 @@ public class BlockFitter {
             throw new FittingException("Ranks are empty!", va, initialDD);
         }
         LOG.debug("Ranked dimensions: {}", rdims);
-        
+
         int curDim = 0;
         DimensionRange dr1 = initialDD.dims.get(rdims.get(curDim));
         while (dr1.getSize() <= 1) {
@@ -141,8 +143,8 @@ public class BlockFitter {
             // TODO write a tigher fitter, that tries increments of ranges to waste less space where dimensions impact multiple variables
         }
         // this won't fit...could split along a different dimension but for now just throw an exception
-            throw new FittingException("Splitting over multiple dimensions not yet implemented!", va, initialDD);
-        
+        throw new FittingException("Splitting over multiple dimensions not yet implemented!", va, initialDD);
+
     }
 
     private Pair<VariableAssignment, DataDescriptor> va2ddFull(VariableAssignment va) {
@@ -152,7 +154,12 @@ public class BlockFitter {
             vars.add(varName);
             Variable v = mInfo.getVariable(varName);
             for (Dimension dim : v.getDimensions()) {
-                DimensionRange dr = new DimensionRange(dim.getFullNameEscaped(), 0, dim.getLength()-1, dim.isUnlimited());
+                DimensionRange dr;
+                if (splitDim.isPresent() && dim.getFullNameEscaped().equals(splitDim.get())) {
+                    dr = new DimensionRange(dim.getFullNameEscaped(), 0, dim.getLength() - 1, true);
+                } else {
+                    dr = new DimensionRange(dim.getFullNameEscaped(), 0, dim.getLength() - 1, dim.isUnlimited());
+                }
                 dims.putIfAbsent(dr.name, dr);
             }
         };

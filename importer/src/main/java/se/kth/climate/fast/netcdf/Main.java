@@ -58,7 +58,7 @@ public class Main {
         try {
             CommandLineParser cliparser = new DefaultParser();
             cmd = cliparser.parse(opts, args);
-            
+
             if (cmd.hasOption("h")) {
                 formatter.printHelp("nchdfs <options> <source files>", opts);
                 System.exit(0);
@@ -86,11 +86,17 @@ public class Main {
             // BLOCK SIZE
             if (cmd.hasOption("b")) {
                 String bs = cmd.getOptionValue("b");
+                conf = conf.withValue("nchdfs.blockSizeForced", ConfigValueFactory.fromAnyRef(true, "commandline argument"));
                 conf = conf.withValue("nchdfs.blockSize", ConfigValueFactory.fromAnyRef(bs, "commandline argument"));
             }
             // merge
             if (cmd.hasOption("c")) {
                 conf = conf.withValue("nchdfs.merge", ConfigValueFactory.fromAnyRef(true, "commandline argument"));
+            }
+            // split 
+            if (cmd.hasOption("s")) {
+                String splitDim = cmd.getOptionValue("s");
+                conf = conf.withValue("nchdfs.splitdim", ConfigValueFactory.fromAnyRef(splitDim, "commandline argument"));
             }
 
             // OPEN NetCDF files
@@ -163,6 +169,7 @@ public class Main {
         opts.addOption("r", true, "Write remotely into HDFS at <arg> (can not be used together with -l)");
         opts.addOption("u", true, "Write as HDFS user <arg> (use together with -r)");
         opts.addOption("c", "merge", false, "Merge (concatenate) aligned blocks into a single file that ends in " + FASTConstants.MERGED_SUFFIX + " instead of " + NetCDFConstants.SUFFIX + " (remote only, EXPERIMENTAL)");
+        opts.addOption("s", "splitdim", true, "Treat <arg> as the variable the files are split over, even if it is not marked as unlimited.");
         //opts.addOption("metaformat", true, "File format for exported meta data. Options are {json, avro}");
         opts.addOption("h", "help", false, "Print help");
         return opts;

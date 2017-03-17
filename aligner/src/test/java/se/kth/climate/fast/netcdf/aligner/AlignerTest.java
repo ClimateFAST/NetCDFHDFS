@@ -19,6 +19,9 @@ package se.kth.climate.fast.netcdf.aligner;
 
 import com.google.common.base.Optional;
 import com.google.common.io.Files;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
@@ -37,26 +40,26 @@ import ucar.nc2.NetcdfFile;
  * @author lkroll
  */
 public class AlignerTest {
-
+    
     private static final long MB = 1024 * 1024;
     public static final long BLOCK_SIZE = 64l * MB;
-
+    
     private WorkQueue<File> q;
     private FileGenerator fg;
     private final File dir;
-
+    
     {
         dir = Files.createTempDir();
         dir.deleteOnExit();
         System.out.println("Generating instance of test" + dir.getAbsolutePath());
     }
-
+    
     @Before
     public void setUp() {
         q = new WorkQueue<File>(1000);
         fg = new FileGenerator(200l * MB);
     }
-
+    
     public AlignerTest() {
     }
 
@@ -93,6 +96,8 @@ public class AlignerTest {
     @Test
     public void testWriting() {
         try {
+            Config conf = ConfigFactory.load();
+            conf = conf.withValue("nchdfs.splitdim", ConfigValueFactory.fromAnyRef("rows", "test argument"));
             String inPath = dir.getAbsolutePath() + "/in.nc";
             File f = new File(inPath);
             f.createNewFile();
@@ -102,7 +107,32 @@ public class AlignerTest {
             NetcdfFile ncfile = NetcdfFile.open(inPath);
             MetaInfo mInfo = MetaInfo.fromNetCDF(ncfile);
             //BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MaxInfVarRecordMeasure());
-            BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MinFilesMeasure());
+            BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MinFilesMeasure(), conf);
+            VariableAlignment va = aligner.align();
+            System.out.println("***** Chosen Alignment:\n" + va + " *****");
+            Assert.assertTrue(va.assignments.get(0).infVariables.contains("values"));
+            Assert.assertTrue(va.fits.get(0).dataDescriptors.get(0).splitDim.isPresent());
+            Assert.assertTrue(va.fits.get(0).dataDescriptors.get(0).splitDim.get().equals("rows"));
+        } catch (IOException ex) {
+            ex.printStackTrace(System.err);
+            Assert.fail(ex.getMessage());
+        }
+    }
+    
+    @Test
+    public void testSplitDim() {
+        try {
+            Config conf = ConfigFactory.load();
+            String inPath = dir.getAbsolutePath() + "/in.nc";
+            File f = new File(inPath);
+            f.createNewFile();
+            f.deleteOnExit();
+            fg.generate(f);
+            System.out.println("***** File generated: " + inPath + " *****");
+            NetcdfFile ncfile = NetcdfFile.open(inPath);
+            MetaInfo mInfo = MetaInfo.fromNetCDF(ncfile);
+            //BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MaxInfVarRecordMeasure());
+            BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MinFilesMeasure(), conf);
             VariableAlignment va = aligner.align();
             System.out.println("***** Chosen Alignment:\n" + va + " *****");
             NetCDFWriter writer = new NetCDFWriter();
@@ -126,5 +156,5 @@ public class AlignerTest {
             Assert.fail(ex.getMessage());
         }
     }
-
+    
 }

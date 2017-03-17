@@ -73,7 +73,7 @@ public class LocalImporter implements Runnable {
                 MetaInfo mInfo = MetaInfo.fromNetCDF(ncfile);
                 Metadata meta = MetaConverter.convert(ncfile, mInfo);
                 metas.add(meta);
-                BlockAligner aligner = new BlockAligner(blockSize, mInfo, aqm);
+                BlockAligner aligner = new BlockAligner(blockSize, mInfo, aqm, conf);
                 VariableAlignment va = aligner.align();
                 LOG.info("Chosen alignment: {}", va);
                 writer.write(va, ls.progressPipe);
