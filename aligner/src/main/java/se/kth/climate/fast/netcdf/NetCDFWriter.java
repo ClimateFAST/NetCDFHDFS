@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import se.kth.climate.fast.netcdf.metadata.GsonSink;
 import se.kth.climate.fast.netcdf.metadata.MetaSink;
 import se.kth.climate.fast.netcdf.metadata.MetaSinkFactory;
 import ucar.ma2.Array;
+import ucar.ma2.IndexIterator;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Dimension;
@@ -55,8 +57,6 @@ import ucar.nc2.Variable;
 public class NetCDFWriter {
 
     static final Logger LOG = LoggerFactory.getLogger(NetCDFWriter.class);
-    
-    
 
     private final File tmpDir;
 
@@ -66,6 +66,22 @@ public class NetCDFWriter {
     }
 
     public void write(VariableAlignment va, WorkQueue<File> progressPipe) throws IOException {
+        final Map<String, VariableMapping<?, ?>> mappings = new HashMap<>();
+        final Map<String, VariableMapping.MapperFactory<?, ?>> mapperFactories = new HashMap<>();
+        if (va.size() != 0) {
+            VariableFit vf = va.fits.get(0);
+            if (vf.dataDescriptors.size() != 0) {
+                DataDescriptor dd = vf.dataDescriptors.get(0);
+                MetaInfo mi = dd.metaInfo;
+                for (Map.Entry<String, VariableMapping<?, ?>> e : mi.mappings.entrySet()) {
+                    String vName = e.getKey();
+                    VariableMapping<?, ?> mapping = e.getValue();
+                    VariableMapping.MapperFactory<?, ?> factory = mapping.prepare(mi);
+                    mappings.put(vName, mapping);
+                    mapperFactories.put(vName, factory);
+                }
+            }
+        }
         for (Pair<VariableAssignment, VariableFit> pvv : va) {
             final VariableAssignment vas = pvv.getValue0();
             final VariableFit vf = pvv.getValue1();
@@ -100,24 +116,42 @@ public class NetCDFWriter {
                             d.setUnlimited(dr.inf);
                             newDims.put(dr.name, d);
                         });
-                        HashMap<String, Variable> newVars = new HashMap<>();
+                        HashMap<String, Pair<Variable, Optional<VariableMapping.Mapper>>> newVars = new HashMap<>();
                         dd.vars.forEach((varName) -> {
                             Variable vOld = dd.metaInfo.getVariable(varName);
-                            List<Dimension> vdims = vOld.getDimensions().stream().map(
-                                    (d) -> newDims.get(d.getFullName())
-                            ).collect(Collectors.toList());
-                            Variable vNew = writer.addVariable(null, varName, vOld.getDataType(), vdims);
-                            newVars.put(varName, vNew);
+                            if (mappings.containsKey(varName)) {
+                                VariableMapping<?, ?> mapping = mappings.get(varName);
+                                VariableMapping.MapperFactory<?, ?> factory = mapperFactories.get(varName);
+                                List<Dimension> vdims = vOld.getDimensions().stream().map(
+                                        (d) -> newDims.get(d.getFullName())
+                                ).collect(Collectors.toList());
+                                Variable vNew = writer.addVariable(null, varName, mapping.outputType(), vdims);
+                                VariableMapping.Mapper<?, ?> mapper = factory.mapper(vOld);
+                                newVars.put(varName, Pair.with(vNew, Optional.of(mapper)));
+                            } else {
+                                List<Dimension> vdims = vOld.getDimensions().stream().map(
+                                        (d) -> newDims.get(d.getFullName())
+                                ).collect(Collectors.toList());
+                                Variable vNew = writer.addVariable(null, varName, vOld.getDataType(), vdims);
+                                newVars.put(varName, Pair.with(vNew, Optional.absent()));
+                            }
                         });
                         writer.create();
                         NetcdfFile origin = dd.metaInfo.ncfile;
-                        for (Variable var : newVars.values()) {
+                        for (Pair<Variable, Optional<VariableMapping.Mapper>> p : newVars.values()) {
+                            Variable var = p.getValue0();
+                            Optional<VariableMapping.Mapper> mapperO = p.getValue1();
                             Variable vOld = dd.metaInfo.getVariable(var.getFullName());
                             List<Range> ranges = vOld.getDimensions().stream().map((d)
                                     -> dd.dims.get(d.getFullName()).toRange()
                             ).collect(Collectors.toList());
                             Array data = vOld.read(ranges);
-                            writer.write(var, data);
+                            if (mapperO.isPresent()) {
+                                Array dataMapped = mapArray(data, mapperO.get());
+                                writer.write(var, dataMapped);
+                            } else {
+                                writer.write(var, data);
+                            }
                         }
                     } catch (InvalidRangeException ex) {
                         LOG.error("Error on reading/writing variable!", ex);
@@ -132,6 +166,19 @@ public class NetCDFWriter {
                 }
             }
         }
+    }
+
+    private Array mapArray(Array input, VariableMapping.Mapper<Object, Object> mapper) {
+        Array output = Array.factory(mapper.mapping().outputType(), input.getShape());
+        IndexIterator iterIn = input.getIndexIterator();
+        IndexIterator iterOut = output.getIndexIterator();
+        while (iterIn.hasNext() && iterOut.hasNext()) {
+            iterIn.next();
+            iterOut.next();
+            Object o = mapper.map(iterIn.getObjectCurrent());
+            iterOut.setObjectCurrent(o);           
+        }
+        return output;
     }
 
     public void writeMeta(Metadata meta, WorkQueue<File> progressPipe) throws IOException {

@@ -50,9 +50,9 @@ import ucar.nc2.Variable;
 public class FileGenerator {
 
     static final Logger LOG = LoggerFactory.getLogger(FileGenerator.class);
-    private static final String TITLE = "test";
-    private static final String DIM = "rows";
-    private static final String VAR = "values";
+    static final String TITLE = "test";
+    static final String DIM = "rows";
+    static final String VAR = "values";
     //
     private final int records;
 
@@ -185,6 +185,28 @@ public class FileGenerator {
             for (int i = 0; i < d.getLength(); i++) {
                 count++;
                 sum += data.getInt(i);
+            }
+        }
+        return checkBlockSum(sum, count);
+    }
+
+    public boolean checkBlocksMapped(List<NetcdfFile> ncfiles) throws IOException {
+        // files may be out of order so just check the sum of values (very unlikely to match if the files are wrong)
+        long sum = 0;
+        int count = 0;
+        for (NetcdfFile ncfile : ncfiles) {
+            LOG.debug("Checking block {}", ncfile.getLocation());
+            Triplet<Dimension, Variable, Boolean> dvb = checkHeaders(ncfile, false);
+            boolean correct = dvb.getValue2();
+            if (!correct) {
+                return false; // some required things might be missing
+            }
+            Dimension d = dvb.getValue0();
+            Variable v = dvb.getValue1();
+            Array data = v.read();
+            for (int i = 0; i < d.getLength(); i++) {
+                count++;
+                sum += ((int) data.getDouble(i)) / 2;
             }
         }
         return checkBlockSum(sum, count);

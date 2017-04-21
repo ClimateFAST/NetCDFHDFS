@@ -123,7 +123,7 @@ public class DataDescriptor {
             Variable v = metaInfo.getVariable(vName);
             ds += NetCDFConstants.ALIGN_SIZE; // assume worst case alignment
             if (v.getDataType() != DataType.STRING) {
-                ds += variableSize(vName) * Math.max((long) v.getElementSize(), NetCDFConstants.PADDING_SIZE);
+                ds += variableSize(vName) * ((long) Math.max(metaInfo.getVarElementSize(v), NetCDFConstants.PADDING_SIZE));
             } else {
                 throw new RuntimeException("Can't deal with string variables, yet.");
             }

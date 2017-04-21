@@ -46,7 +46,7 @@ public class NetCDFFileReader extends RecordReader<Void, NCWritable> {
 
     @Override
     public void initialize(InputSplit is, TaskAttemptContext tac) throws IOException, InterruptedException {
-        LOG.debug("{}: Got split: {}", this, is);
+        LOG.info("{}: Got split: {}", this, is);
         if (is instanceof FileSplit) {
             FileSplit split = (FileSplit) is;
             Path p = split.getPath();
@@ -58,9 +58,19 @@ public class NetCDFFileReader extends RecordReader<Void, NCWritable> {
             }
             int len = (int) split.getLength(); //fstat.getLen();
             istream = fs.open(p, (int) bs);
-            istream.seek(split.getStart());
+            //istream.seek(split.getStart());
             byte[] data = new byte[len];
-            istream.read(data);
+            istream.readFully(split.getStart(), data);
+//            int readBytes = 0;
+//            do {
+//                int res = istream.read(data, readBytes, len - readBytes);
+//                if (res > -1) {
+//                    readBytes += res;
+//                } else {
+//                    throw new IOException("End of stream reached before whole file was read!");
+//                }
+//            } while (readBytes < len);
+            //LOG.info("Read {}bytes of {}bytes with {}*4 zeroes", new Object[]{len, fstat.getLen(), arrayZeroes(data)});
             NCWritable ncw = NCWritable.fromRaw(data, p.getName());
             //NetcdfFile ncfile = NetcdfFile.openInMemory(p.getName(), data);
             ncw.get().setTitle(p.getName()); // FIXME not really the right thing to put there
@@ -79,9 +89,19 @@ public class NetCDFFileReader extends RecordReader<Void, NCWritable> {
                     int len = (int) llen;
                     long bs = fstat.getBlockSize();
                     istream = fs.open(p, (int) bs);
-                    istream.seek(split.getOffset(0));
+                    //istream.seek(split.getOffset(0));
                     byte[] data = new byte[len];
-                    istream.read(data);
+                    istream.readFully(split.getOffset(0), data);
+//                    int readBytes = 0;
+//                    do {
+//                        int res = istream.read(data, readBytes, len - readBytes);
+//                        if (res > -1) {
+//                            readBytes += res;
+//                        } else {
+//                            throw new IOException("End of stream reached before whole file was read!");
+//                        }
+//                    } while (readBytes < len);
+                    //LOG.info("Read {}bytes of {}bytes with {}*4 zeroes", new Object[]{len, fstat.getLen(), arrayZeroes(data)});
                     NCWritable ncw = NCWritable.fromRaw(data, p.getName());
                     //NetcdfFile ncfile = NetcdfFile.openInMemory(p.getName(), data);
                     ncw.get().setTitle(p.getName()); // FIXME not really the right thing to put there
@@ -99,6 +119,16 @@ public class NetCDFFileReader extends RecordReader<Void, NCWritable> {
         }
     }
 
+//    private long arrayZeroes(byte[] data) {
+//        long c = 0;
+//        for (int i = 0; i < data.length; i++) {
+//            if (data[i] == 0) {
+//                c++;
+//            }
+//        }
+//        return c;
+//    }
+    
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
         if (loaded && ncfileO.isPresent() && !read) {

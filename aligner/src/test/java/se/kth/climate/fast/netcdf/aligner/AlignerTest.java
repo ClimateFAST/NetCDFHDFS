@@ -24,15 +24,19 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import se.kth.climate.fast.netcdf.MetaInfo;
 import se.kth.climate.fast.netcdf.NetCDFWriter;
+import se.kth.climate.fast.netcdf.VariableMapping;
 import se.kth.climate.fast.netcdf.WorkQueue;
 import se.kth.climate.fast.netcdf.testing.FileGenerator;
+import se.kth.climate.fast.netcdf.testing.TestMapping;
 import ucar.nc2.NetcdfFile;
 
 /**
@@ -150,6 +154,47 @@ public class AlignerTest {
             }
             System.out.println("***** Checking... *****");
             Assert.assertTrue(fg.checkBlocks(ncfiles));
+            System.out.println("***** All checked out! *****");
+        } catch (IOException ex) {
+            ex.printStackTrace(System.err);
+            Assert.fail(ex.getMessage());
+        }
+    }
+    
+    @Test
+    public void testMapping() {
+        try {
+            Config conf = ConfigFactory.load();
+            String inPath = dir.getAbsolutePath() + "/in.nc";
+            File f = new File(inPath);
+            f.createNewFile();
+            f.deleteOnExit();
+            fg.generate(f);
+            System.out.println("***** File generated: " + inPath + " *****");
+            NetcdfFile ncfile = NetcdfFile.open(inPath);
+            Map<String, VariableMapping<?, ?>> mappings = new HashMap<>();
+            TestMapping tm = new TestMapping();
+            mappings.put(tm.variable(), tm);
+            MetaInfo mInfo = MetaInfo.fromNetCDF(ncfile, mappings);
+            //BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MaxInfVarRecordMeasure());
+            BlockAligner aligner = new BlockAligner(BLOCK_SIZE, mInfo, new MinFilesMeasure(), conf);
+            VariableAlignment va = aligner.align();
+            System.out.println("***** Chosen Alignment:\n" + va + " *****");
+            NetCDFWriter writer = new NetCDFWriter();
+            System.out.println("***** Alignment complete. Writing... *****");
+            writer.write(va, q);
+            q.complete();
+            System.out.println("***** Writing complete. *****");
+            List<NetcdfFile> ncfiles = new LinkedList<>();
+            Optional<File> fO = q.take();
+            while (fO.isPresent()) {
+                NetcdfFile ncf = NetcdfFile.open(fO.get().getAbsolutePath());
+                ncfiles.add(ncf);
+                // next
+                fO = q.take();
+            }
+            System.out.println("***** Checking... *****");
+            Assert.assertTrue(fg.checkBlocksMapped(ncfiles));
             System.out.println("***** All checked out! *****");
         } catch (IOException ex) {
             ex.printStackTrace(System.err);

@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>se.kth.climate.fast</groupId>
     <artifactId>netcdf-hdfs</artifactId>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>NetCDF HDFS</name>
 

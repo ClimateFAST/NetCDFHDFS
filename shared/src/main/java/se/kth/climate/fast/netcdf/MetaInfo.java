@@ -48,10 +48,12 @@ public class MetaInfo {
     final Map<String, Long> variableSize = new HashMap<>();
     final HashMultimap<String, String> variableDimensionCache = HashMultimap.create();
     final Set<String> dimensionCache = new HashSet<>();
+    final Map<String, VariableMapping<?, ?>> mappings;
     public final NetcdfFile ncfile;
 
-    private MetaInfo(NetcdfFile ncfile) {
+    private MetaInfo(NetcdfFile ncfile, Map<String, VariableMapping<?, ?>> mappings) {
         this.ncfile = ncfile;
+        this.mappings = mappings;
     }
 
     @Override
@@ -91,11 +93,11 @@ public class MetaInfo {
     public boolean isDescription(String varName) {
         return dimensionCache.contains(varName);
     }
-    
+
     public boolean isConstant(String varName) {
         return constants.contains(varName);
     }
-    
+
     public Set<String> getConstants() {
         return new HashSet<>(constants);
     }
@@ -135,6 +137,17 @@ public class MetaInfo {
         return variableSize.get(v.getFullNameEscaped());
     }
 
+    public int getVarElementSize(Variable v) {
+        int elementSize;
+        if (mappings.containsKey(v.getFullNameEscaped())) {
+            VariableMapping mapping = mappings.get(v.getFullNameEscaped());
+            elementSize = mapping.outputType().getSize();
+        } else {
+            elementSize = v.getElementSize();
+        }
+        return elementSize;
+    }
+
     public Variable getVariable(String varName) {
         return ncfile.findVariable(varName);
     }
@@ -144,18 +157,21 @@ public class MetaInfo {
     }
 
     public static MetaInfo fromNetCDF(NetcdfFile ncfile) {
+        return MetaInfo.fromNetCDF(ncfile, new HashMap<>());
+    }
+
+    public static MetaInfo fromNetCDF(NetcdfFile ncfile, Map<String, VariableMapping<?, ?>> mappings) {
         LOG.debug("Global Attrs:");
         LOG.debug(ncfile.getGlobalAttributes().toString());
         LOG.debug("Dimensions:");
         LOG.debug(ncfile.getDimensions().toString());
         LOG.debug("Variables:");
         LOG.debug(ncfile.getVariables().toString());
-        
-        MetaInfo mInfo = new MetaInfo(ncfile);
+
+        MetaInfo mInfo = new MetaInfo(ncfile, mappings);
         Set<String> normalDims = new HashSet<>();
         Set<String> bndsDims = new HashSet<>();
-        for (Variable v
-                : ncfile.getVariables()) {
+        for (Variable v : ncfile.getVariables()) {
             if (v.getFullNameEscaped().contains("bnds")) {
                 for (Dimension d : v.getDimensions()) {
                     bndsDims.add(d.getFullNameEscaped());
@@ -188,24 +204,32 @@ public class MetaInfo {
                 }
             }
         }
-        for (Dimension d
-                : ncfile.getDimensions()) {
+        for (Dimension d : ncfile.getDimensions()) {
             mInfo.dimensionCache.add(d.getFullNameEscaped());
             if (!mInfo.canBeBounds(d)) { // also create an index field for this dimension
                 String name = d.getFullNameEscaped() + "_index";
                 mInfo.indices.put(name, d.getFullNameEscaped());
             }
         }
-        for (Variable v
-                : ncfile.getVariables()) {
+        for (Variable v : ncfile.getVariables()) {
             List<Dimension> dims = v.getDimensions();
             mInfo.variableDimensionCache.putAll(v.getFullNameEscaped(), dims.stream().map(d -> d.getFullNameEscaped())::iterator);
+            int elementSize;
+            if (mappings.containsKey(v.getFullNameEscaped())) {
+                VariableMapping mapping = mappings.get(v.getFullNameEscaped());
+                if (!mapping.inputType().equals(v.getDataType())) {
+                    throw new RuntimeException("Mapper input type (" + mapping.inputType() + ") does not match variable type (" + v.getDataType() + ")!");
+                }
+                elementSize = mapping.outputType().getSize();
+            } else {
+                elementSize = v.getElementSize();
+            }
             if (NetCDFUtils.isConstant(dims)) {
                 mInfo.constants.add(v.getFullNameEscaped());
-                mInfo.variableSize.put(v.getFullNameEscaped(), Long.valueOf(v.getDataType().getSize()));
+                mInfo.variableSize.put(v.getFullNameEscaped(), Long.valueOf(elementSize));
             } else {
                 if (v.getDataType() != DataType.STRING) {
-                    long size = v.getSize() * v.getElementSize();
+                    long size = v.getSize() * elementSize;
                     mInfo.variableSize.put(v.getFullNameEscaped(), size);
                 } else {
                     throw new RuntimeException("String variables aren't supported at the moment as their size cannot be calculated");

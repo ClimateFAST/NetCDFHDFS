@@ -22,6 +22,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.UUID;
 import org.apache.hadoop.io.Writable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.nc2.NetcdfFile;
 
 /**
@@ -30,6 +32,8 @@ import ucar.nc2.NetcdfFile;
  */
 public class NCWritable implements Writable {
 
+    static final Logger LOG = LoggerFactory.getLogger(NCWritable.class);
+    
     private NetcdfFile ncfile = null;
     private byte[] raw = null;
     
@@ -44,6 +48,7 @@ public class NCWritable implements Writable {
         }
         out.writeInt(raw.length);
         out.write(raw);
+        //LOG.debug("******* Wrote NCWritable (len="+raw.length+") **********");
     }
 
     @Override
@@ -52,7 +57,8 @@ public class NCWritable implements Writable {
         if (len > 0) {
             raw = new byte[len];
             in.readFully(raw);
-            ncfile = NetcdfFile.openInMemory(UUID.randomUUID().toString(), raw); // I think the location needs to be unique           
+            //LOG.debug("******* Read NCWritable (len="+raw.length+") **********");
+            ncfile = NetcdfFile.openInMemory(UUID.randomUUID().toString(), raw); // I think the location needs to be unique                   
         } else { 
             throw new IOException("Data for file is empty!");            
         }

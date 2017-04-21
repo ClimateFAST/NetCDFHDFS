@@ -32,10 +32,15 @@ public class VariableAlignment implements Iterable<Pair<VariableAssignment, Vari
     public final ImmutableList<VariableFit> fits;
 
     private VariableAlignment(ImmutableList<VariableAssignment> assignments, ImmutableList<VariableFit> fits) {
+        assert(assignments.size() == fits.size());
         this.assignments = assignments;
         this.fits = fits;
     }
 
+    public int size() {
+        return assignments.size();
+    }
+    
     @Override
     public Iterator<Pair<VariableAssignment, VariableFit>> iterator() {
         return new  Iterator<Pair<VariableAssignment, VariableFit>>() {
